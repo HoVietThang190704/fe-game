@@ -1,6 +1,6 @@
 export const LOGO_SIZE = {
-  WIDTH: 40,
-  HEIGHT: 37,
+  WIDTH: 150,
+  HEIGHT: 80,
   TITLE: 14,
   SUB: 12,
 } as const;
