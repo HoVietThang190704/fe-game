@@ -27,6 +27,7 @@ export function Navbar() {
             width={LOGO_SIZE.WIDTH}
             height={LOGO_SIZE.HEIGHT}
             priority
+            unoptimized
           />
         </Link>
 
