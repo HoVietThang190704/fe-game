@@ -1,7 +1,7 @@
 export const Endpoint = {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    USER: '/user'
+    LOGIN: '/api/auth/login',
+    REGISTER: '/api/auth/register',
+    USER: '/api/user'
 } as const;
 
 export type EndpointKey = keyof typeof Endpoint;
