@@ -1,10 +1,5 @@
-/**
- * Product Controller
- * Xử lý logic nghiệp vụ cho tính năng thêm / quản lý sản phẩm
- */
 const productModel = require('../models/productModel');
 
-// [GET] /products - Danh sách sản phẩm
 exports.index = async (req, res) => {
   try {
     const products = await productModel.getAll();
@@ -14,12 +9,10 @@ exports.index = async (req, res) => {
   }
 };
 
-// [GET] /products/add - Form thêm sản phẩm
 exports.showAddForm = async (req, res) => {
   res.render('products/add', { error: null });
 };
 
-// [POST] /products/add - Xử lý thêm sản phẩm
 exports.addProduct = async (req, res) => {
   const { name, price, category_id } = req.body;
   try {
