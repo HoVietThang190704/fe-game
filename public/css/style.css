@@ -31,3 +31,109 @@ footer {
   width: 100%;
   bottom: 0;
 }
+
+/* Reset cơ bản để giao diện đồng nhất trên mọi trình duyệt */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f6; /* Màu nền xám nhạt dịu mắt */
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ================= HEADER & NAV ================= */
+header {
+    background-color: #2c3e50; /* Xanh đen hiện đại */
+    color: #ffffff;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+}
+
+nav a {
+    color: #ecf0f1;
+    text-decoration: none;
+    margin-left: 20px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #3498db; /* Đổi màu xanh sáng khi di chuột */
+}
+
+/* ================= MAIN CONTENT ================= */
+main {
+    flex: 1; /* Đẩy footer xuống dưới cùng */
+    padding: 2.5rem 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+main h2 {
+    margin-bottom: 2rem;
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 0.5rem;
+    display: inline-block;
+}
+
+/* ================= CATEGORY CARDS (Dạng Lưới) ================= */
+ul {
+    list-style: none;
+    display: grid;
+    /* Tự động chia cột: tối thiểu 250px, tối đa 1 phần đều nhau */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+li {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid #3498db; /* Đường viền nhấn màu xanh */
+}
+
+li:hover {
+    transform: translateY(-5px); /* Hiệu ứng nảy lên nhẹ */
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+li a {
+    text-decoration: none;
+    color: #2980b9;
+    font-size: 1.3rem;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+li a:hover {
+    color: #1c5980;
+}
+
+/* ================= FOOTER ================= */
+footer {
+    text-align: center;
+    padding: 1.2rem;
+    background-color: #2c3e50;
+    color: #bdc3c7;
+    font-size: 0.9rem;
+}
