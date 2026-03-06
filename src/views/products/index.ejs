@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danh sách sản phẩm | My Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>My Shop</h1>
+    <nav>
+      <a href="/">Trang chủ</a>
+      <a href="/products">Danh sách sản phẩm</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-header">
+      <h2>Danh sách sản phẩm</h2>
+      <a href="/products/add" class="btn-add">+ Thêm sản phẩm</a>
+    </div>
+
+    <% if (products.length === 0) { %>
+      <p class="empty-msg">Chưa có sản phẩm nào. <a href="/products/add">Thêm ngay!</a></p>
+    <% } else { %>
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên sản phẩm</th>
+            <th>Giá</th>
+            <th>Ngày tạo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% products.forEach(p => { %>
+            <tr>
+              <td><%= p.id %></td>
+              <td><%= p.name %></td>
+              <td><%= Number(p.price).toLocaleString('vi-VN') %> đ</td>
+              <td><%= new Date(p.created_at).toLocaleDateString('vi-VN') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 My Shop</p>
+  </footer>
+</body>
+</html>
