@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= product.name %> | My Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>My Shop</h1>
+    <nav>
+      <a href="/">Trang chủ</a>
+      <a href="/products">Danh sách sản phẩm</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="product-detail">
+      <h2><%= product.name %></h2>
+      <div class="product-info">
+        <p><strong>ID:</strong> <%= product.id %></p>
+        <p><strong>Giá:</strong> <%= Number(product.price).toLocaleString('vi-VN') %> đ</p>
+        <p><strong>Ngày tạo:</strong> <%= new Date(product.created_at).toLocaleDateString('vi-VN') %></p>
+        <% if (product.category_id) { %>
+          <p><strong>Danh mục:</strong> <%= product.category_id %></p>
+        <% } %>
+      </div>
+      <a href="/products" class="btn-back">Quay lại danh sách</a>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2023 My Shop. Tất cả quyền được bảo lưu.</p>
+  </footer>
+</body>
+</html>

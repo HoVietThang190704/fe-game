@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh mục sản phẩm - Ban Hang MVC</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Danh mục sản phẩm</h1>
+        <nav>
+            <a href="/">Home</a> | 
+            <a href="/category">Category</a>
+        </nav>
+    </header>
+
+    <main>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div style="color: red;">
+                <strong>Error:</strong> <%= error %>
+            </div>
+        <% } else if (typeof categories !== 'undefined' && categories.length > 0) { %>
+            <h2>Tất cả danh mục</h2>
+            <ul>
+                <% categories.forEach(category => { %>
+                    <li>
+                        <a href="/category/<%= category.id %>"><%= category.name %></a> 
+                        - Môt tả: <%= category.description %>
+                    </li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p>Hiện chưa có danh mục nào.</p>
+        <% } %>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 My Shop</p>
+    </footer>
+</body>
+</html>
