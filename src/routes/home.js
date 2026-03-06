@@ -5,9 +5,10 @@ const pool = require('../config/db');
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM products LIMIT 10');
-    res.render('index', { products: rows });
+    // always pass an `error` property so the view can safely reference it
+    res.render('index', { products: rows, error: null });
   } catch (err) {
-    res.render('index', { error: err.message, products: [] });
+    res.render('index', { products: [], error: err.message });
   }
 });
 

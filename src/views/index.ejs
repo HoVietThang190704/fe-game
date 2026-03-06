@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ban Hang MVC</title>
+  <title>Web Bán Hàng - Thế Giới Di Động</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/header.css">
 </head>
+
 <body>
   <header>
     <h1>Welcome to Shop</h1>
@@ -15,27 +21,35 @@
       <a href="/products/add" class="btn-nav-add">+ Thêm sản phẩm</a>
     </nav>
   </header>
+  <!-- shared header fragment -->
+  <%- include('fragments/header') %>
 
-  <main>
-    <% if (error) { %>
-      <div style="color:red;">
-        <strong>Error:</strong> <%= error %>
-      </div>
-      <p>Make sure the MySQL database exists and connection settings are correct.</p>
-    <% } else if (typeof products !== 'undefined' && products.length) { %>
-      <h2>Products</h2>
-      <ul>
-        <% products.forEach(p => { %>
-          <li><%= p.name %> - $<%= p.price %></li>
-        <% }) %>
-      </ul>
-    <% } else { %>
-      <p>This is a basic MVC template using Node.js, Express, HTML and CSS.</p>
-    <% } %>
-  </main>
+    <script src="/js/header.js" defer></script>
 
-  <footer>
-    <p>&copy; 2026 My Shop</p>
-  </footer>
+    <main>
+      <% if (typeof error !=='undefined' && error) { %>
+        <div style="color:red;">
+          <strong>Error:</strong>
+          <%= error %>
+        </div>
+        <p>Make sure the MySQL database exists and connection settings are correct.</p>
+        <% } else if (typeof products !=='undefined' && products.length) { %>
+          <h2>Products</h2>
+          <ul>
+            <% products.forEach(p=> { %>
+              <li>
+                <%= p.name %> - $<%= p.price %>
+              </li>
+              <% }) %>
+          </ul>
+          <% } else { %>
+            <p>This is a basic MVC template using Node.js, Express, HTML and CSS.</p>
+            <% } %>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 My Shop</p>
+    </footer>
 </body>
+
 </html>
