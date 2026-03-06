@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt Hàng</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/order.css">
+</head>
+<body>
+    <div class="order-container">
+        <h2 class="order-title">Đặt Hàng</h2>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% const products = [
+                    { name: 'Áo thun', price: 120000 },
+                    { name: 'Quần jeans', price: 350000 }
+                ]; %>
+                <% products.forEach(function(product) { %>
+                <tr>
+                    <td><%= product.name %></td>
+                    <td><%= product.price.toLocaleString('vi-VN') %>₫</td>
+                    <td><input type="number" value="1" min="1" style="width:60px;"></td>
+                    <td><%= product.price.toLocaleString('vi-VN') %>₫</td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <div class="order-total">
+            Tổng cộng: <span id="total"><%= products.reduce((sum, p) => sum + p.price, 0).toLocaleString('vi-VN') %>₫</span>
+        </div>
+        <button class="order-btn">Đặt hàng</button>
+    </div>
+    <script>
+        // Thông báo khi đặt hàng thành công
+        document.querySelector('.order-btn').addEventListener('click', function() {
+            alert('Cảm ơn bạn đã đặt hàng! Đơn hàng của bạn đã được ghi nhận.');
+        });
+        // Tính tổng tiền động khi thay đổi số lượng
+        const rows = document.querySelectorAll('.order-table tbody tr');
+        const totalEl = document.getElementById('total');
+        function formatCurrency(num) {
+            return num.toLocaleString('vi-VN') + '₫';
+        }
+        function updateTotal() {
+            let total = 0;
+            rows.forEach(row => {
+                const price = parseInt(row.children[1].textContent.replace(/\D/g, ''));
+                const qty = parseInt(row.querySelector('input').value);
+                const subtotal = price * qty;
+                row.children[3].textContent = formatCurrency(subtotal);
+                total += subtotal;
+            });
+            totalEl.textContent = formatCurrency(total);
+        }
+        rows.forEach(row => {
+            row.querySelector('input').addEventListener('input', updateTotal);
+        });
+    </script>
+</body>
+</html>
