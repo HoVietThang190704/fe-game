@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | My Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+<header class="header">
+  <h1>My Shop</h1>
+  <nav>
+    <a href="/">Trang chủ</a>
+    <a href="/products">Danh sách sản phẩm</a>
+  </nav>
+</header>
+
+<main class="container">
+
+  <div class="product-detail">
+
+    <h2 class="product-name"><%= product.name %></h2>
+
+    <div class="product-info">
+
+      <p>
+        <strong>ID:</strong>
+        <%= product.id || 'Không có dữ liệu' %>
+      </p>
+
+      <p>
+        <strong>Giá:</strong>
+        <%= product.price
+            ? Number(product.price).toLocaleString('vi-VN') + ' đ'
+            : 'Liên hệ'
+        %>
+      </p>
+
+      <p>
+        <strong>Ngày tạo:</strong>
+        <%= product.created_at
+            ? new Date(product.created_at).toLocaleDateString('vi-VN')
+            : 'Không xác định'
+        %>
+      </p>
+
+      <% if (product.category_id) { %>
+        <p>
+          <strong>Danh mục:</strong>
+          <%= product.category_id %>
+        </p>
+      <% } %>
+
+    </div>
+
+    <div class="actions">
+      <a href="/products" class="btn-back">← Quay lại danh sách</a>
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 My Shop. Tất cả quyền được bảo lưu.</p>
+</footer>
+
+</body>
+</html>

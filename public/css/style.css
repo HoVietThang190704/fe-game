@@ -252,3 +252,50 @@ footer {
 .empty-msg {
   color: #666;
 }
+
+/* ── Giao diện Product-Detail ── */
+.container {
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 0 20px;
+}
+
+.product-detail {
+  background: #fff;
+  padding: 24px 28px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.product-name {
+  font-size: 28px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.product-info {
+  margin-bottom: 20px;
+}
+
+.product-info p {
+  margin: 8px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.btn-back {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 18px;
+  background-color: #1d9b4d;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-back:hover {
+  background-color: #157a3a;
+  transform: translateY(-1px);
+}
