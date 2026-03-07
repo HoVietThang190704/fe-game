@@ -2,12 +2,31 @@ const productModel = require('../models/productModel');
 
 exports.showDetail = async (req, res) => {
   try {
-    const product = await productModel.getById(req.params.id);
-    if (!product) {
-      return res.status(404).send('Sản phẩm không tồn tại.');
+    const id = req.params.id;
+
+    // kiểm tra id
+    if (!id) {
+      return res.status(400).send('ID sản phẩm không hợp lệ.');
     }
-    res.render('products/productDetail', { product });
+
+    const product = await productModel.getById(id);
+
+    // kiểm tra tồn tại
+    if (!product) {
+      return res.status(404).render('errors/404', {
+        message: 'Sản phẩm không tồn tại'
+      });
+    }
+
+    res.render('products/productDetail', {
+      title: product.name,
+      product
+    });
+
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error(err);
+    res.status(500).render('errors/500', {
+      message: 'Lỗi server'
+    });
   }
 };
