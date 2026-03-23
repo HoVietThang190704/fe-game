@@ -61,7 +61,7 @@ export default function LoginPage() {
         localStorage.setItem("accessToken", result.accessToken);
         localStorage.setItem("refreshToken", result.refreshToken);
       } catch (e) {}
-      router.push("/");
+      router.push("/dashboard");
     }
   };
 
