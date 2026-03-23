@@ -9,8 +9,12 @@ export function ProfileCard({ player }: Props) {
   return (
     <article className="rounded-2xl border border-cyan-400/20 bg-slate-950/40 p-6 shadow-[0_0_35px_rgba(34,211,238,0.15)] backdrop-blur-xl">
       <div className="mb-6 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
-          <User2 className="h-12 w-12 text-blue-200" />
+        <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+          {player.avatar_url ? (
+            <img src={player.avatar_url} alt={player.username} className="h-full w-full object-cover" />
+          ) : (
+            <User2 className="h-12 w-12 text-blue-200" />
+          )}
         </div>
         <p className="text-3xl font-black tracking-tight text-cyan-50">{player.username}</p>
         <div className="mt-1 flex items-center justify-center gap-2 text-sm font-bold text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]">

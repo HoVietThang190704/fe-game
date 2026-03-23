@@ -20,6 +20,7 @@ export type PlayerStats = {
   totalMatches: number;
   wins: number;
   losses: number;
+  avatar_url?: string;
 };
 
 export type DashboardState = {
