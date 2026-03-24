@@ -1,11 +1,11 @@
-import { FooterSection } from "./FooterSection"
+import { FeatureHighlightsSection } from "./FeatureHighlightsSection"
 import { HeroSection } from "./HeroSection"
 
 export default function Home() {
   return (
     <div className="bg-background text-foreground">
       <HeroSection />
-      <FooterSection />
+      <FeatureHighlightsSection />
     </div>
   )
 }
