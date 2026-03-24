@@ -11,6 +11,12 @@ type BaseResponse<T> = {
 
 export type LoginPayload = { email: string; password: string };
 export type RegisterPayload = { name?: string; username?: string; email: string; password: string };
+export type ProfileResponse = {
+  _id: string;
+  username: string;
+  email: string;
+  name?: string;
+};
 
 export async function login(payload: LoginPayload) {
   const res = await fetch(`${BASE_URL}${Endpoint.LOGIN}`, {
@@ -70,4 +76,21 @@ export async function logout(refreshToken: string) {
   }
 
   return body;
+}
+
+export async function getMyProfile(accessToken: string) {
+  const res = await fetch(`${BASE_URL}${Endpoint.USER_PROFILE}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<ProfileResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Get profile failed: ${res.status}`);
+  }
+
+  return body.data;
 }
