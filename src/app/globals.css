@@ -124,3 +124,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.profile-theme {
+  --background: oklch(24.855% 0.09782 291.617);
+  --primary: oklch(0.32 0.15 295 / 0.58);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.512 0.28 302.164);
+  --accent: oklch(0.707 0.165 254.624);
+}
