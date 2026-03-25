@@ -7,7 +7,7 @@ import { CommandCard } from "@/src/components/dashboard/CommandCard";
 import { ProfileCard } from "@/src/components/dashboard/ProfileCard";
 import { JoinRoomModal } from "@/src/components/dashboard/JoinRoomModal";
 import { useDashboardData } from "@/src/lib/hooks/useDashboardData";
-import { createPrivateMatch } from "@/src/lib/api/match";
+import { createPrivateMatch, joinPrivateMatch } from "@/src/lib/api/match";
 
 const ROOM_PIN_STORAGE_KEY = "currentRoomPin";
 const ROOM_ID_STORAGE_KEY = "currentMatchId";
@@ -37,6 +37,8 @@ export default function DashboardPage() {
 
         try {
           const room = await createPrivateMatch(accessToken);
+
+          // Lưu thông tin phòng vừa tạo vào localStorage
           if (room.pinCode) {
             localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
           }
@@ -44,6 +46,7 @@ export default function DashboardPage() {
             localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
           }
           localStorage.setItem(LEFT_ROOM_FLAG, "false");
+
           router.push("/dashboard/waiting-room");
         } catch (err: unknown) {
           setRoomError(
@@ -56,9 +59,49 @@ export default function DashboardPage() {
 
         return;
       }
+
+      if (commandId === "join-room") {
+        setIsJoinRoomModalOpen(true);
+        return;
+      }
+
       console.log("Command clicked:", commandId);
     },
     [creatingRoom, router],
+  );
+
+  // LOGIC JOIN PHÒNG ĐÃ ĐƯỢC CẬP NHẬT Ở ĐÂY
+  const handleJoinRoomSubmit = useCallback(
+    async (pinCode: string) => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        throw new Error("Thiếu access token. Vui lòng đăng nhập lại.");
+      }
+
+      try {
+        // 1. Gọi API tham gia phòng
+        const room = await joinPrivateMatch(pinCode, accessToken);
+
+        // 2. BẮT BUỘC: Lưu thông tin phòng vào localStorage TRƯỚC khi chuyển trang
+        if (room.pinCode) {
+          localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
+        }
+        if (room.matchId) {
+          localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
+        }
+        localStorage.setItem(LEFT_ROOM_FLAG, "false");
+
+        // 3. Chuyển hướng sang trang phòng chờ
+        router.push("/dashboard/waiting-room");
+      } catch (err: unknown) {
+        throw new Error(
+          err instanceof Error
+            ? err.message
+            : "Không thể tham gia phòng. Kiểm tra lại mã PIN.",
+        );
+      }
+    },
+    [router],
   );
 
   if (loading) {
@@ -106,6 +149,13 @@ export default function DashboardPage() {
           </article>
         </section>
       </div>
+
+      {/* Join Room Modal */}
+      <JoinRoomModal
+        isOpen={isJoinRoomModalOpen}
+        onClose={() => setIsJoinRoomModalOpen(false)}
+        onSubmit={handleJoinRoomSubmit}
+      />
     </main>
   );
 }
