@@ -116,6 +116,40 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+  --intro-hero-from: #020617;
+  --intro-hero-via: #03323f;
+  --intro-hero-to: #063443;
+  --intro-hero-accent-from: #06b6d4;
+  --intro-hero-accent-to: #2dd4bf;
+
+  --feature-card-bg: rgba(15, 23, 42, 0.72);
+  --feature-card-border: rgba(148, 163, 184, 0.2);
+  --feature-card-shadow: 0 20px 55px rgba(18, 63, 86, 0.35);
+
+  --footer-bg: rgba(15, 23, 42, 0.9);
+  --footer-border: rgba(255, 255, 255, 0.1);
+}
+
+.hero-section {
+  background: linear-gradient(135deg, var(--intro-hero-from), var(--intro-hero-via), var(--intro-hero-to));
+}
+
+.hero-accent {
+  background: linear-gradient(to right, var(--intro-hero-accent-from), var(--intro-hero-accent-to));
+}
+
+.feature-card {
+  background: var(--feature-card-bg);
+  border: 1px solid var(--feature-card-border);
+  box-shadow: var(--feature-card-shadow);
+}
+
+.footer-section {
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -123,4 +157,21 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer components {
+  .public-screen {
+    @apply min-h-screen bg-[radial-gradient(circle_at_top,var(--color-primary)/35%,transparent_55%),radial-gradient(circle_at_bottom,var(--color-primary)/20%,transparent_45%)] px-4 py-8 md:px-8;
+  }
+
+  .glass-panel {
+    @apply border border-border/70 bg-card/45 backdrop-blur-xl;
+  }
+}
+.profile-theme {
+  --background: oklch(24.855% 0.09782 291.617);
+  --primary: oklch(0.32 0.15 295 / 0.58);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.512 0.28 302.164);
+  --accent: oklch(0.707 0.165 254.624);
 }

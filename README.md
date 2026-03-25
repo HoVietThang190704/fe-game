@@ -1,19 +1,5 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-### Environment setup
-
-Create a `.env.local` file in the project root and define the backend server URL so the frontend can reach the login API. Example:
-
-```
-NEXT_PUBLIC_SERVER_URL=http://localhost:5000
-# or alternatively NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-> **Important**: Next.js loads `NEXT_PUBLIC_*` variables at startup. If you add/change them, you must restart the development server (`npm run dev`).
-
-The `AuthService` reads the first defined value in this order:
-`NEXT_PUBLIC_SERVER_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_BASE_URL`, and as a last resort `http://localhost:5000`.
-
 ## Getting Started
 
 First, run the development server:
