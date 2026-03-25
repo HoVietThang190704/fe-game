@@ -1,17 +1,23 @@
 "use client";
 
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardNavbar } from "@/src/components/dashboard/DashboardNavbar";
 import { CommandCard } from "@/src/components/dashboard/CommandCard";
 import { ProfileCard } from "@/src/components/dashboard/ProfileCard";
 import { useDashboardData } from "@/src/lib/hooks/useDashboardData";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data, loading, error } = useDashboardData();
 
   const handleCommand = useCallback((commandId: string) => {
+    if (commandId === "create-room") {
+      router.push("/waiting-room");
+      return;
+    }
     console.log("Command clicked:", commandId);
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (

@@ -159,6 +159,15 @@
   }
 }
 
+@layer components {
+  .public-screen {
+    @apply min-h-screen bg-[radial-gradient(circle_at_top,var(--color-primary)/35%,transparent_55%),radial-gradient(circle_at_bottom,var(--color-primary)/20%,transparent_45%)] px-4 py-8 md:px-8;
+  }
+
+  .glass-panel {
+    @apply border border-border/70 bg-card/45 backdrop-blur-xl;
+  }
+}
 .profile-theme {
   --background: oklch(24.855% 0.09782 291.617);
   --primary: oklch(0.32 0.15 295 / 0.58);
