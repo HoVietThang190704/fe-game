@@ -14,6 +14,33 @@ export type CreatePrivateMatchResponse = {
   pinCode: string;
 };
 
+export type MatchPlayer = {
+  userId: string;
+  displayName: string;
+  avatar: string;
+  rank: number;
+  isReady: boolean;
+  playerNumber: number;
+  health: number;
+};
+
+export type MatchStateResponse = {
+  matchId: string | null;
+  pinCode: string;
+  status: string;
+  gameBoard: Record<string, unknown>;
+  players: MatchPlayer[];
+  boardState: {
+    player1Revealed: Array<{ x: number; y: number }>;
+    player2Revealed: Array<{ x: number; y: number }>;
+    player1Flags: Array<{ x: number; y: number }>;
+    player2Flags: Array<{ x: number; y: number }>;
+  };
+  currentTurn: string | null;
+  turnStartTime: string | null;
+  turnTimeLimit: number;
+};
+
 export async function createPrivateMatch(accessToken: string) {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_CREATE}`, {
     method: "POST",
@@ -26,6 +53,23 @@ export async function createPrivateMatch(accessToken: string) {
   const body = (await res.json()) as BaseResponse<CreatePrivateMatchResponse>;
   if (!res.ok || !body.success || !body.data) {
     throw new Error(body.message || `Create match failed: ${res.status}`);
+  }
+
+  return body.data;
+}
+
+export async function getMatchState(matchId: string, accessToken: string): Promise<MatchStateResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_STATE.replace(":id", matchId)}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<MatchStateResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Get match state failed: ${res.status}`);
   }
 
   return body.data;

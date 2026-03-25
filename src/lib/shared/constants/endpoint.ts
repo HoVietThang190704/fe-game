@@ -7,6 +7,7 @@ export const Endpoint = {
   USER_PROFILE: "/api/user/profile",
   MATCH_CREATE: "/api/matches/create",
   MATCH_JOIN: "/api/matches/join",
+  MATCH_STATE: "/api/matches/:id",
   MATCH_LEAVE: "/api/matches",
 } as const;
 
