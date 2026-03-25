@@ -2,33 +2,9 @@
 
 import React from "react";
 import { logout } from "@/src/lib/api/auth";
-  // Đăng xuất
-  const handleLogout = async () => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("No refresh token found");
-      }
-      await logout(refreshToken);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      window.location.href = "/";
-    } catch (err: any) {
-      alert(err.message || "Đăng xuất thất bại");
-    }
-  };
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Globe,
-  Lock,
-  LogOut,
-  Moon,
-  UserCog,
-  Volume2,
-} from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 
 import { Button } from "@/src/components/ui/button";
 import { SettingsHeaderCard } from "@/components/dashboard/settings/SettingsHeaderCard";
@@ -47,6 +23,22 @@ export default function SettingsPage() {
   }, []);
 
   const darkModeEnabled = mounted ? theme !== "light" : true;
+
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("No refresh token found");
+      }
+      await logout(refreshToken);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Đăng xuất thất bại";
+      alert(message);
+    }
+  };
 
   return (
     <main className="justify-center py-10 px-4">
