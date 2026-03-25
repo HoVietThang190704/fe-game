@@ -39,6 +39,11 @@ function GamePageContent() {
     opponentMisses: 0,
   });
 
+  // HP system (3 for each player)
+  const [playerHP, setPlayerHP] = useState(3);
+  const [opponentHP, setOpponentHP] = useState(3);
+  const [gameStatus, setGameStatus] = useState<"playing" | "won" | "lost">("playing");
+
   // Handle setup confirmation
   const handleSetupComplete = useCallback(() => {
     if (!isConnected) {
@@ -95,12 +100,20 @@ function GamePageContent() {
           ...prev,
           playerHits: prev.playerHits + 1,
         }));
+        // Hit found a mine - opponent loses 1 HP
+        setOpponentHP((prev) => {
+          const newHP = prev - 1;
+          if (newHP <= 0) {
+            setGameStatus("won");
+          }
+          return newHP;
+        });
       } else {
         setStats((prev) => ({
           ...prev,
           playerMisses: prev.playerMisses + 1,
         }));
-        // Turn ends
+        // Turn ends on miss
         setCurrentPlayer("opponent");
       }
     },
@@ -124,6 +137,18 @@ function GamePageContent() {
     [currentPlayer, opponentBoard, toggleFlag, isConnected]
   );
 
+  // Handle timer timeout - lose 1 HP
+  const handleTimeOut = useCallback(() => {
+    setPlayerHP((prev) => {
+      const newHP = prev - 1;
+      if (newHP <= 0) {
+        setGameStatus("lost");
+      }
+      return newHP;
+    });
+    // Opponent's turn continues if time runs out
+  }, []);
+
   // Handle power usage
   const handlePowerUse = useCallback(
     (boardSide: "left" | "right", powerIndex: 1 | 2 | 3) => {
@@ -136,8 +161,9 @@ function GamePageContent() {
   // Handle reset
   const handleReset = useCallback(() => {
     setGamePhase("setup");
-    setCurrentPlayer("you");
-    yourBoard.reset();
+    setCurrentPlayer("you");    setPlayerHP(3);
+    setOpponentHP(3);
+    setGameStatus("playing");    yourBoard.reset();
     opponentBoard.reset();
     setStats({
       playerHits: 0,
@@ -167,17 +193,17 @@ function GamePageContent() {
             onCellRightClick={handleOpponentCellRightClick}
             onReset={handleReset}
             stats={stats}
+            playerHP={playerHP}
+            opponentHP={opponentHP}
+            gameStatus={gameStatus}
+            onTimeOut={handleTimeOut}
             playerData={{
               username: "You",
               avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=you",
-              elo: 1250,
-              winRate: 58,
             }}
             opponentData={{
               username: "Opponent",
               avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=opponent",
-              elo: 1200,
-              winRate: 55,
             }}
             onPowerUse={handlePowerUse}
           />

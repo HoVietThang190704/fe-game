@@ -48,66 +48,38 @@ export async function createPrivateMatch(accessToken: string) {
   return body.data;
 }
 
-export async function findRandomMatch(accessToken: string) {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_FIND}`, {
+export async function joinPrivateMatch(
+  pinCode: string,
+  accessToken: string,
+): Promise<CreatePrivateMatchResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_JOIN}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ pinCode }),
   });
 
-  const body = (await res.json()) as BaseResponse<WaitingQueueResponse>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Find match failed: ${res.status}`);
+  const body = (await res.json()) as BaseResponse<CreatePrivateMatchResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Join match failed: ${res.status}`);
   }
 
-  return body.data ?? null;
-}
-
-export async function cancelRandomMatch(accessToken: string) {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_CANCEL}`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const body = (await res.json()) as BaseResponse<null>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Cancel match failed: ${res.status}`);
-  }
-
-  return true;
-}
-
-export async function getActiveMatch(accessToken: string) {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_ACTIVE}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const body = (await res.json()) as BaseResponse<ActiveMatchResponse>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Get active match failed: ${res.status}`);
-  }
-
-  return body.data ?? null;
+  return body.data;
 }
 
 export async function leaveMatch(matchId: string, accessToken: string) {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_LEAVE}/${matchId}/leave`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+  const res = await fetch(
+    `${BASE_URL}${Endpoint.MATCH_LEAVE}/${matchId}/leave`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
 
   const body = (await res.json()) as BaseResponse<null>;
   if (!res.ok || !body.success) {

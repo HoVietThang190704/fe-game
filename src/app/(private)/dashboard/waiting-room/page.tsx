@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 import { createPrivateMatch, leaveMatch } from "@/src/lib/api/match";
 import { getMyProfile } from "@/src/lib/api/auth";
 import { RoomPinSection } from "@/src/components/dashboard/waiting-room/RoomPinSection";
@@ -19,6 +21,7 @@ export default function WaitingRoomPage() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomPin, setRoomPin] = useState("----");
   const [playerName, setPlayerName] = useState("Người chơi");
+  const [opponentName, setOpponentName] = useState<string | null>(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -41,7 +44,9 @@ export default function WaitingRoomPage() {
         const cachedRoomId = localStorage.getItem(ROOM_ID_STORAGE_KEY);
 
         if (leftRoom) {
-          setRoomError("Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.");
+          setRoomError(
+            "Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.",
+          );
           setIsCreatingRoom(false);
           return;
         }
@@ -124,6 +129,87 @@ export default function WaitingRoomPage() {
     };
   }, []);
 
+  // ĐÃ SỬA LẠI HOÀN TOÀN THÀNH STOMP + SOCKJS CHO SPRING BOOT
+  useEffect(() => {
+    if (!roomId) return; // Chỉ chạy khi đã có ID phòng
+
+    // Port mặc định của Spring Boot thường là 8080 (hoặc port bạn cấu hình)
+    const serverUrl =
+      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
+    const accessToken = localStorage.getItem("accessToken");
+
+    const stompClient = new Client({
+      webSocketFactory: () => new SockJS(`${serverUrl}/ws`), // Đảm bảo backend có endpoint /ws
+      connectHeaders: {
+        Authorization: `Bearer ${accessToken}`, // Truyền token nếu Spring Security yêu cầu
+      },
+      debug: (str) => {
+        console.log("STOMP: " + str); // Hiển thị log kết nối ra console để dễ test
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    let isConnected = false;
+
+    stompClient.onConnect = (frame) => {
+      console.log("Đã kết nối STOMP qua SockJS thành công!");
+      isConnected = true;
+
+      // 1. Đăng ký lắng nghe kênh phòng (Topic)
+      stompClient.subscribe(`/topic/match/${roomId}`, (message) => {
+        if (message.body) {
+          const data = JSON.parse(message.body);
+          console.log("STOMP message received:", data);
+
+          if (data.type === "PLAYER_JOINED") {
+            console.log("Người chơi mới tham gia:", data);
+            // Extract playerName from payload
+            setOpponentName(data.payload?.playerName || data.playerName);
+          } else if (data.type === "PLAYER_LEFT") {
+            setOpponentName(null);
+          } else if (data.type === "MATCH_STARTED") {
+            // Chuyển sang màn hình chơi
+            // router.push(`/game/${roomId}`);
+          }
+        }
+      });
+
+      // 2. Thông báo cho backend biết mình đã tham gia phòng
+      stompClient.publish({
+        destination: `/app/match/${roomId}/join`,
+        body: JSON.stringify({
+          playerName: playerName,
+        }),
+      });
+    };
+
+    stompClient.onStompError = (frame) => {
+      console.error("Lỗi STOMP Server: " + frame.headers["message"]);
+      console.error("Chi tiết: " + frame.body);
+      isConnected = false;
+    };
+
+    // Kích hoạt kết nối
+    stompClient.activate();
+
+    // Cleanup khi component bị hủy (người dùng chuyển trang/tắt tab)
+    return () => {
+      // Use REST API for leaving instead of STOMP to avoid connection issues
+      if (accessToken && roomId) {
+        leaveMatch(roomId, accessToken).catch((error) => {
+          console.error("Error leaving match:", error);
+        });
+      }
+
+      // Gracefully close STOMP connection
+      if (stompClient.active) {
+        stompClient.deactivate();
+      }
+    };
+  }, [roomId, router]); // Removed playerName from dependencies to avoid reconnections
+
   const handleCopyPin = async () => {
     if (isCreatingRoom || roomError || roomPin === "----") {
       return;
@@ -176,11 +262,12 @@ export default function WaitingRoomPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_20%_15%,_rgba(5,209,255,0.16),_rgba(8,30,54,0.92)_60%)] p-4 text-sky-200">
       <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
         <section className="rounded-2xl border border-sky-200/30 bg-slate-950/40 p-6 shadow-[0_0_32px_rgba(0,160,255,0.25)] backdrop-blur-lg">
-
           <div className="mb-6 text-center">
-            <h1 className="text-4xl font-black tracking-wide text-cyan-200">PHÒNG CHỜ</h1>
+            <h1 className="text-4xl font-black tracking-wide text-cyan-200">
+              PHÒNG CHỜ
+            </h1>
             <p className="mt-2 text-sm text-sky-100/70">
-            Đang chờ người chơi thứ hai tham gia...
+              Đang chờ người chơi thứ hai tham gia...
             </p>
           </div>
 
@@ -192,7 +279,10 @@ export default function WaitingRoomPage() {
             onCopyPin={handleCopyPin}
           />
 
-          <PlayerStatusSection playerName={playerName} />
+          <PlayerStatusSection
+            playerName={playerName}
+            opponentName={opponentName}
+          />
 
           <MatchSettingsSection />
 
@@ -207,7 +297,9 @@ export default function WaitingRoomPage() {
                 setIsCreatingRoom(true);
                 const accessToken = localStorage.getItem("accessToken");
                 if (!accessToken) {
-                  throw new Error("Thiếu access token. Vui lòng đăng nhập lại.");
+                  throw new Error(
+                    "Thiếu access token. Vui lòng đăng nhập lại.",
+                  );
                 }
 
                 await leaveMatch(roomId, accessToken);
@@ -219,7 +311,9 @@ export default function WaitingRoomPage() {
                 setRoomId(null);
                 router.push("/dashboard");
               } catch (err: unknown) {
-                setRoomError(err instanceof Error ? err.message : "Rời phòng thất bại");
+                setRoomError(
+                  err instanceof Error ? err.message : "Rời phòng thất bại",
+                );
               } finally {
                 setIsCreatingRoom(false);
               }
