@@ -42,6 +42,8 @@ export interface GameState {
   playerBoard: GameBoard;
   opponentBoard: GameBoard;
   mines: number;
+  playerHP: number;
+  opponentHP: number;
   moveHistory: Array<{
     player: string;
     row: number;
