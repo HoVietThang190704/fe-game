@@ -19,13 +19,13 @@ export function DashboardNavbar() {
 
       {/* Actions Section */}
       <div className="flex items-center gap-3">
-        <button
-          className="group flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-slate-900/40 px-5 py-2.5 text-xs font-black text-cyan-400 transition-all hover:bg-cyan-500/10 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:border-cyan-500/40"
-          type="button"
+        <Link
+          href="/dashboard/leaderboard"
+          className="group flex items-center gap-2 rounded-xl border border-yellow-400/30 bg-gradient-to-b from-[#2a1745] to-[#4b2e83] px-5 py-2.5 text-xs font-black text-yellow-300 transition-all hover:bg-yellow-400/10 hover:shadow-[0_0_20px_rgba(251,191,36,0.2)] hover:border-yellow-400/60"
         >
-          <Trophy className="h-4 w-4 text-amber-500 fill-amber-500/20" />
+          <Trophy className="h-4 w-4 text-yellow-300 fill-yellow-300/20" />
           <span className="tracking-[0.2em] uppercase">Leaderboard</span>
-        </button>
+        </Link>
 
         <button
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700/30 bg-slate-900/40 text-amber-400 transition-all hover:bg-slate-800 hover:text-amber-300 hover:border-amber-400/30"

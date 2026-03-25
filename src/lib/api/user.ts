@@ -34,3 +34,29 @@ export async function getUserProfile(fields?: string): Promise<User> {
 
     return baseResponse.data;
 }
+
+export async function updateUserProfile(data: { name: string; avatar_url?: string }): Promise<User> {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+        throw new Error("No access token found");
+    }
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+    const url = `${baseUrl}${Endpoint.USER}/profile`;
+    const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update user profile");
+    }
+    const baseResponse: BaseResponse<User> = await response.json();
+    if (!baseResponse.success || !baseResponse.data) {
+        throw new Error(baseResponse.message || "Failed to update user profile");
+    }
+    return baseResponse.data;
+}
