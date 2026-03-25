@@ -3,7 +3,11 @@ import { dashboardInitialState } from "@/src/components/dashboard/dashboard-data
 import type { DashboardState } from "@/src/components/dashboard/dashboard.types";
 import { getUserProfile } from "../api/user";
 
-export function useDashboardData(): { data: DashboardState | null; loading: boolean; error: string | null } {
+export function useDashboardData(): {
+  data: DashboardState | null;
+  loading: boolean;
+  error: string | null;
+} {
   const [data, setData] = useState<DashboardState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +16,9 @@ export function useDashboardData(): { data: DashboardState | null; loading: bool
     async function fetchData() {
       setLoading(true);
       try {
-        const userProfile = await getUserProfile("username,name,rank,wins,losses,totalMatches,winRate,avatar_url");
+        const userProfile = await getUserProfile(
+          "username,name,rank,wins,losses,totalMatches,winRate,avatar_url",
+        );
         setData({
           ...dashboardInitialState,
           player: {
@@ -23,7 +29,7 @@ export function useDashboardData(): { data: DashboardState | null; loading: bool
             wins: userProfile.wins,
             losses: userProfile.losses,
             avatar_url: userProfile.avatar_url,
-          }
+          },
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Dashboard load failed");
