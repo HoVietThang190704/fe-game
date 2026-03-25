@@ -12,6 +12,11 @@ export default function DashboardPage() {
   const { data, loading, error } = useDashboardData();
 
   const handleCommand = useCallback((commandId: string) => {
+    if (commandId === "quick-match") {
+      router.push("/quick-match");
+      return;
+    }
+
     if (commandId === "create-room") {
       router.push("/waiting-room");
       return;
