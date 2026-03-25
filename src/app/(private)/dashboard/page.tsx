@@ -20,12 +20,19 @@ export default function DashboardPage() {
   const { data, loading, error } = useDashboardData();
   const [isJoinRoomModalOpen, setIsJoinRoomModalOpen] = useState(false);
 
-  const handleCommand = useCallback((commandId: string) => {
-    if (commandId === "quick-match") {
-      router.push("/dashboard/quick-match");
-      return;
-    }
+  const handleCommand = useCallback(
+    async (commandId: string) => {
+      if (commandId === "quick-match") {
+        router.push("/dashboard/quick-match");
+        return;
+      }
 
+      if (commandId === "join-room") {
+        setIsJoinRoomModalOpen(true);
+        return;
+      }
+
+      if (commandId === "create-room") {
         setCreatingRoom(true);
         setRoomError(null);
 
@@ -39,7 +46,6 @@ export default function DashboardPage() {
         try {
           const room = await createPrivateMatch(accessToken);
 
-          // Lưu thông tin phòng vừa tạo vào localStorage
           if (room.pinCode) {
             localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
           }
@@ -61,14 +67,9 @@ export default function DashboardPage() {
         return;
       }
 
-      if (commandId === "join-room") {
-        setIsJoinRoomModalOpen(true);
-        return;
-      }
-
       console.log("Command clicked:", commandId);
     },
-    [creatingRoom, router],
+    [router],
   );
 
   // LOGIC JOIN PHÒNG ĐÃ ĐƯỢC CẬP NHẬT Ở ĐÂY

@@ -39,6 +39,8 @@ export type MatchStateResponse = {
   currentTurn: string | null;
   turnStartTime: string | null;
   turnTimeLimit: number;
+};
+
 export type ActiveMatchResponse = {
   matchId: string;
   status: string;
@@ -68,6 +70,57 @@ export async function createPrivateMatch(accessToken: string) {
   const body = (await res.json()) as BaseResponse<CreatePrivateMatchResponse>;
   if (!res.ok || !body.success || !body.data) {
     throw new Error(body.message || `Create match failed: ${res.status}`);
+  }
+
+  return body.data;
+}
+
+export async function findRandomMatch(accessToken: string): Promise<WaitingQueueResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_FIND}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<WaitingQueueResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Find random match failed: ${res.status}`);
+  }
+
+  return body.data;
+}
+
+export async function cancelRandomMatch(accessToken: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_CANCEL}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<null>;
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || `Cancel random match failed: ${res.status}`);
+  }
+
+  return;
+}
+
+export async function getActiveMatch(accessToken: string): Promise<ActiveMatchResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_ACTIVE}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<ActiveMatchResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Get active match failed: ${res.status}`);
   }
 
   return body.data;
