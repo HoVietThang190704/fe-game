@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { User2 } from "lucide-react";
 import { HPDisplay } from "./HPDisplay";
 
@@ -25,12 +26,13 @@ export const GamePlayerInfo: React.FC<GamePlayerInfoProps> = ({
       {/* Avatar & Username */}
       <div className="flex items-center gap-3 flex-1">
         <div className="flex-shrink-0">
-          <div className="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center justify-center">
+          <div className="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center justify-center relative">
             {player.avatar_url ? (
-              <img
+              <Image
                 src={player.avatar_url}
                 alt={player.username}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
               />
             ) : (
               <User2 className="h-8 w-8 sm:h-10 sm:w-10 text-blue-200" />
