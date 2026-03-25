@@ -1,14 +1,25 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, Suspense } from "react";
 import { MineSetupPhase } from "@/src/components/game/MineSetupPhase";
 import { GamePlayPhase } from "@/src/components/game/GamePlayPhase";
+import { GameWrapper } from "@/src/components/game/GameWrapper";
 import { useGameSetup, useGameBoard } from "@/src/lib/hooks/useGameBoard";
+import { useGameLogic } from "@/src/lib/hooks/useGameLogic";
+import { useGame } from "@/src/lib/context/GameContext";
 import { createEmptyBoard, placeMines } from "@/src/lib/game/game.utils";
+import { Spinner } from "@/src/components/ui/spinner";
+import { useSearchParams } from "next/navigation";
 
-export default function GamePage() {
+function GamePageContent() {
+  const searchParams = useSearchParams();
+  const matchId = searchParams.get("matchId") || "default-match";
+  const userId = searchParams.get("userId") || "default-user";
+
   const [gamePhase, setGamePhase] = useState<"setup" | "playing">("setup");
   const [currentPlayer, setCurrentPlayer] = useState<"you" | "opponent">("you");
+  const { gameState, updateGameState } = useGame();
+  const { isConnected, placeBombs, revealCell, toggleFlag } = useGameLogic(matchId, userId);
 
   // Setup phase
   const { setupState, toggleCell, clearSelection, completeSetup } =
@@ -35,33 +46,53 @@ export default function GamePage() {
 
   // Handle setup confirmation
   const handleSetupComplete = useCallback(() => {
+    if (!isConnected) {
+      alert("WebSocket not connected. Please wait and try again.");
+      return;
+    }
+
     completeSetup();
+
+    // Convert selected cells to coordinates
+    const bombCoordinates = Array.from(setupState.selectedCells).map((cellId) => {
+      const [x, y] = cellId.split("-").map(Number);
+      return { x, y };
+    });
 
     // Place mines on your board based on selection
     yourBoard.placeMinesOnBoard(Array.from(setupState.selectedCells));
 
-    // Simulate opponent placing mines
-    const randomCells = new Set<string>();
-    while (randomCells.size < 20) {
-      const randomId = `${Math.floor(Math.random() * 10)}-${Math.floor(
-        Math.random() * 10
-      )}`;
-      randomCells.add(randomId);
-    }
-    opponentBoard.placeMinesOnBoard(Array.from(randomCells));
+    // Send bombs to backend
+    placeBombs(bombCoordinates);
 
+    // Update game state
+    updateGameState({ status: "PREPARATION", matchId, userId });
     setGamePhase("playing");
-  }, [completeSetup, setupState.selectedCells, yourBoard, opponentBoard]);
+  }, [
+    completeSetup,
+    setupState.selectedCells,
+    yourBoard,
+    placeBombs,
+    isConnected,
+    matchId,
+    userId,
+    updateGameState,
+  ]);
 
   // Handle cell click on opponent board
   const handleOpponentCellClick = useCallback(
     (cellId: string) => {
-      if (currentPlayer !== "you") return;
+      if (currentPlayer !== "you" || !isConnected) return;
 
+      const [row, col] = cellId.split("-").map(Number);
+
+      // Send reveal cell to backend
+      revealCell(row, col);
+
+      // Optimistic update
       opponentBoard.reveal(cellId);
 
       // Logic to check result
-      const [row, col] = cellId.split("-").map(Number);
       const cell = opponentBoard.board.cells[row][col];
 
       if (cell.state === "hit") {
@@ -86,17 +117,24 @@ export default function GamePage() {
         setCurrentPlayer("opponent");
       }
     },
-    [currentPlayer, opponentBoard]
+    [currentPlayer, opponentBoard, revealCell, isConnected]
   );
 
   // Handle right click on opponent board (flag)
   const handleOpponentCellRightClick = useCallback(
     (cellId: string, e: React.MouseEvent) => {
       e.preventDefault();
-      if (currentPlayer !== "you") return;
+      if (currentPlayer !== "you" || !isConnected) return;
+
+      const [row, col] = cellId.split("-").map(Number);
+
+      // Send toggle flag to backend
+      toggleFlag(row, col);
+
+      // Optimistic update
       opponentBoard.flag(cellId);
     },
-    [currentPlayer, opponentBoard]
+    [currentPlayer, opponentBoard, toggleFlag, isConnected]
   );
 
   // Handle timer timeout - lose 1 HP
@@ -172,5 +210,15 @@ export default function GamePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function GamePage() {
+  return (
+    <GameWrapper>
+      <Suspense fallback={<Spinner />}>
+        <GamePageContent />
+      </Suspense>
+    </GameWrapper>
   );
 }
