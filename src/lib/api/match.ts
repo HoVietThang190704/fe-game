@@ -97,3 +97,20 @@ export async function getActiveMatch(accessToken: string) {
 
   return body.data ?? null;
 }
+
+export async function leaveMatch(matchId: string, accessToken: string) {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_LEAVE}/${matchId}/leave`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<null>;
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || `Leave match failed: ${res.status}`);
+  }
+
+  return true;
+}
