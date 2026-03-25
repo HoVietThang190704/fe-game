@@ -20,10 +20,11 @@ export default function DashboardPage() {
   const { data, loading, error } = useDashboardData();
   const [isJoinRoomModalOpen, setIsJoinRoomModalOpen] = useState(false);
 
-  const handleCommand = useCallback(
-    async (commandId: string) => {
-      if (commandId === "create-room") {
-        if (creatingRoom) return;
+  const handleCommand = useCallback((commandId: string) => {
+    if (commandId === "quick-match") {
+      router.push("/dashboard/quick-match");
+      return;
+    }
 
         setCreatingRoom(true);
         setRoomError(null);

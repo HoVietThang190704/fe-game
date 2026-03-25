@@ -1,6 +1,6 @@
 import { Endpoint } from "../shared/constants/endpoint";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
 
 type BaseResponse<T> = {
   response: number;
@@ -39,6 +39,21 @@ export type MatchStateResponse = {
   currentTurn: string | null;
   turnStartTime: string | null;
   turnTimeLimit: number;
+export type ActiveMatchResponse = {
+  matchId: string;
+  status: string;
+  currentPlayerId?: string;
+  playerCount?: number;
+};
+
+export type WaitingQueueResponse = {
+  id: string;
+  userId: string;
+  rank: number;
+  status: string;
+  boardSize?: string;
+  matched?: boolean;
+  matchId?: string;
 };
 
 export async function createPrivateMatch(accessToken: string) {
