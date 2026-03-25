@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardNavbar } from "@/src/components/dashboard/DashboardNavbar";
 import { CommandCard } from "@/src/components/dashboard/CommandCard";
 import { ProfileCard } from "@/src/components/dashboard/ProfileCard";
@@ -8,29 +9,31 @@ import { JoinRoomModal } from "@/src/components/dashboard/JoinRoomModal";
 import { useDashboardData } from "@/src/lib/hooks/useDashboardData";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data, loading, error } = useDashboardData();
   const [isJoinRoomModalOpen, setIsJoinRoomModalOpen] = useState(false);
 
-  const handleCommand = useCallback((commandId: string) => {
-    console.log("Command clicked:", commandId);
-
-    switch (commandId) {
-      case "join-room":
-        setIsJoinRoomModalOpen(true);
-        break;
-      case "quick-match":
-        // TODO: Implement quick match
-        break;
-      case "create-room":
-        // TODO: Implement create room
-        break;
-      case "match-history":
-        // TODO: Implement match history
-        break;
-      default:
-        break;
-    }
-  }, []);
+  const handleCommand = useCallback(
+    (commandId: string) => {
+      switch (commandId) {
+        case "create-room":
+          router.push("/waiting-room");
+          break;
+        case "join-room":
+          setIsJoinRoomModalOpen(true);
+          break;
+        case "quick-match":
+          console.log("Quick match clicked");
+          break;
+        case "match-history":
+          console.log("Match history clicked");
+          break;
+        default:
+          break;
+      }
+    },
+    [router],
+  );
 
   const handleJoinRoomSubmit = async (pinCode: string) => {
     try {
