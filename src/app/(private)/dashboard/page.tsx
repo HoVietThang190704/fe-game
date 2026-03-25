@@ -1,23 +1,61 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardNavbar } from "@/src/components/dashboard/DashboardNavbar";
 import { CommandCard } from "@/src/components/dashboard/CommandCard";
 import { ProfileCard } from "@/src/components/dashboard/ProfileCard";
 import { useDashboardData } from "@/src/lib/hooks/useDashboardData";
+import { createPrivateMatch } from "@/src/lib/api/match";
+
+const ROOM_PIN_STORAGE_KEY = "currentRoomPin";
+const ROOM_ID_STORAGE_KEY = "currentMatchId";
+const LEFT_ROOM_FLAG = "leftRoom";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
   const { data, loading, error } = useDashboardData();
 
-  const handleCommand = useCallback((commandId: string) => {
-    if (commandId === "create-room") {
-      router.push("/waiting-room");
-      return;
-    }
-    console.log("Command clicked:", commandId);
-  }, [router]);
+  const handleCommand = useCallback(
+    async (commandId: string) => {
+      if (commandId === "create-room") {
+        if (creatingRoom) return;
+
+        setCreatingRoom(true);
+        setRoomError(null);
+
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+          setRoomError("Thiếu access token. Vui lòng đăng nhập lại.");
+          setCreatingRoom(false);
+          return;
+        }
+
+        try {
+          const room = await createPrivateMatch(accessToken);
+          if (room.pinCode) {
+            localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
+          }
+          if (room.matchId) {
+            localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
+          }
+          localStorage.setItem(LEFT_ROOM_FLAG, "false");
+          router.push("/dashboard/waiting-room");
+        } catch (err: unknown) {
+          setRoomError(err instanceof Error ? err.message : "Không thể tạo phòng.");
+          console.error("Create room failed", err);
+        } finally {
+          setCreatingRoom(false);
+        }
+
+        return;
+      }
+      console.log("Command clicked:", commandId);
+    },
+    [creatingRoom, router],
+  );
 
   if (loading) {
     return (
@@ -41,6 +79,11 @@ export default function DashboardPage() {
 
           <article className="rounded-2xl border border-sky-200/30 bg-slate-950/40 p-6 shadow-[0_0_32px_rgba(0,160,255,0.25)] backdrop-blur-lg">
             <h2 className="mb-5 text-3xl font-bold tracking-widest text-cyan-300">COMMAND CENTER</h2>
+            {roomError && (
+              <div className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm font-medium text-red-200">
+                {roomError}
+              </div>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               {data.commands.map((card) => (
                 <CommandCard key={card.id} card={card} onClick={handleCommand} />
