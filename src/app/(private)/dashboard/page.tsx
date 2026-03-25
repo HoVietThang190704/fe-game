@@ -18,59 +18,18 @@ export default function DashboardPage() {
   const [roomError, setRoomError] = useState<string | null>(null);
   const { data, loading, error } = useDashboardData();
 
-<<<<<<< HEAD
   const handleCommand = useCallback((commandId: string) => {
     if (commandId === "quick-match") {
-      router.push("/quick-match");
+      router.push("/dashboard/quick-match");
       return;
     }
 
     if (commandId === "create-room") {
-      router.push("/waiting-room");
+      router.push("/dashboard/waiting-room");
       return;
     }
     console.log("Command clicked:", commandId);
   }, [router]);
-=======
-  const handleCommand = useCallback(
-    async (commandId: string) => {
-      if (commandId === "create-room") {
-        if (creatingRoom) return;
-
-        setCreatingRoom(true);
-        setRoomError(null);
-
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-          setRoomError("Thiếu access token. Vui lòng đăng nhập lại.");
-          setCreatingRoom(false);
-          return;
-        }
-
-        try {
-          const room = await createPrivateMatch(accessToken);
-          if (room.pinCode) {
-            localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
-          }
-          if (room.matchId) {
-            localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
-          }
-          localStorage.setItem(LEFT_ROOM_FLAG, "false");
-          router.push("/dashboard/waiting-room");
-        } catch (err: unknown) {
-          setRoomError(err instanceof Error ? err.message : "Không thể tạo phòng.");
-          console.error("Create room failed", err);
-        } finally {
-          setCreatingRoom(false);
-        }
-
-        return;
-      }
-      console.log("Command clicked:", commandId);
-    },
-    [creatingRoom, router],
-  );
->>>>>>> 92351ceb455663d673efb7d47dce9ac8bb3e4db4
 
   if (loading) {
     return (

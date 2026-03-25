@@ -27,6 +27,8 @@ export type WaitingQueueResponse = {
   rank: number;
   status: string;
   boardSize?: string;
+  matched?: boolean;
+  matchId?: string;
 };
 
 export async function createPrivateMatch(accessToken: string) {
@@ -46,14 +48,14 @@ export async function createPrivateMatch(accessToken: string) {
   return body.data;
 }
 
-export async function findRandomMatch(accessToken: string, boardSize: "small" | "medium" | "large") {
+export async function findRandomMatch(accessToken: string) {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_FIND}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ boardSize }),
+    body: JSON.stringify({}),
   });
 
   const body = (await res.json()) as BaseResponse<WaitingQueueResponse>;

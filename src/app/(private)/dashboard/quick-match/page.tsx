@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Shield, Swords, Timer, XCircle } from "lucide-react";
+import { Client, Message } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 import { Button } from "@/src/components/ui/button";
 import { findRandomMatch, cancelRandomMatch, getActiveMatch } from "@/src/lib/api/match";
 import { getUserProfile } from "@/src/lib/api/user";
 
-type BoardSize = "small" | "medium" | "large";
 type SearchStatus = "idle" | "searching" | "matched" | "error";
 
 type CurrentUser = {
@@ -17,16 +18,17 @@ type CurrentUser = {
   email?: string;
 };
 
-const BOARD_LABEL: Record<BoardSize, string> = {
-  small: "Nhỏ (8x8)",
-  medium: "Trung bình (10x10)",
-  large: "Lớn (12x12)",
+type MatchFoundEvent = {
+  type?: string;
+  payload?: {
+    matchId?: string;
+    status?: string;
+  };
 };
 
 export default function QuickMatchPage() {
   const router = useRouter();
   const [status, setStatus] = useState<SearchStatus>("idle");
-  const [boardSize, setBoardSize] = useState<BoardSize>("medium");
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -119,6 +121,49 @@ export default function QuickMatchPage() {
     };
   }, [status, accessToken, user?.id, router]);
 
+  useEffect(() => {
+    if (!user?.id || !accessToken) {
+      return;
+    }
+
+    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
+    const wsUrl = `${serverUrl.replace(/\/$/, "")}/ws-game`;
+    const client = new Client({
+      webSocketFactory: () => new SockJS(wsUrl),
+      reconnectDelay: 2000,
+      onConnect: () => {
+        console.log(`[WebSocket] Connected. Subscribing to /topic/user.${user.id}.matchmaking`);
+        client.subscribe(`/topic/user.${user.id}.matchmaking`, (message: Message) => {
+          console.log("[WebSocket] Received message:", message.body);
+          try {
+            const event = JSON.parse(message.body) as MatchFoundEvent;
+            console.log("[WebSocket] Parsed event:", event);
+            const matchId = event?.payload?.matchId;
+            if (matchId) {
+              console.log(`[WebSocket] Match found! Redirecting to /game?matchId=${matchId}`);
+              setStatus("matched");
+              router.push(`/game?matchId=${encodeURIComponent(matchId)}&userId=${encodeURIComponent(user.id)}`);
+            }
+          } catch (e) {
+            console.error("[WebSocket] Error parsing message:", e);
+          }
+        });
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] Disconnected");
+      },
+    });
+
+    console.log(`[WebSocket] Activating client with URL: ${wsUrl}`);
+    client.activate();
+
+    return () => {
+      if (client.active) {
+        client.deactivate();
+      }
+    };
+  }, [accessToken, router, user?.id]);
+
   const startSearch = useCallback(async () => {
     if (!accessToken || !user?.id) {
       setError("Vui lòng đăng nhập lại để tìm trận");
@@ -127,16 +172,28 @@ export default function QuickMatchPage() {
     }
 
     try {
+      console.log("[StartSearch] Starting search for user:", user.id);
       setStatus("searching");
       setError(null);
       setElapsed(0);
-      await findRandomMatch(accessToken, boardSize);
+      const queue = await findRandomMatch(accessToken);
+
+      console.log("[StartSearch] API response:", queue);
+
+      if (queue?.matchId) {
+        console.log(`[StartSearch] Got matchId immediately: ${queue.matchId}, redirecting...`);
+        setStatus("matched");
+        router.push(`/game?matchId=${encodeURIComponent(queue.matchId)}&userId=${encodeURIComponent(user.id)}`);
+      } else {
+        console.log("[StartSearch] No matchId in response, waiting for polling or WebSocket event");
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Không thể bắt đầu tìm trận";
+      console.error("[StartSearch] Error:", message);
       setError(message);
       setStatus("error");
     }
-  }, [accessToken, boardSize, user?.id]);
+  }, [accessToken, router, user?.id]);
 
   const cancelSearch = useCallback(async () => {
     if (!accessToken) {
@@ -157,34 +214,17 @@ export default function QuickMatchPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_20%_15%,_rgba(5,209,255,0.16),_rgba(8,30,54,0.92)_60%)] p-6 text-sky-200">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-sky-200/30 bg-slate-950/45 p-6 shadow-[0_0_32px_rgba(0,160,255,0.25)] backdrop-blur-lg md:p-8">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-sky-200/30 bg-slate-950/45 p-6 shadow-[0_0_32px_rgba(0,160,255,0.25)] backdrop-blur-lg md:p-8">
         <h1 className="text-4xl font-black tracking-wide text-cyan-200">GHÉP TRẬN NGẪU NHIÊN</h1>
-        <p className="mt-2 text-sky-100/75">Hệ thống sẽ tìm đối thủ gần rank và ghép trận tự động.</p>
-
-        <section className="mt-7 grid gap-4 md:grid-cols-3">
-          {(Object.keys(BOARD_LABEL) as BoardSize[]).map((size) => (
-            <button
-              key={size}
-              type="button"
-              disabled={status === "searching"}
-              onClick={() => setBoardSize(size)}
-              className={`rounded-xl border px-4 py-3 text-left transition ${
-                boardSize === size
-                  ? "border-cyan-300 bg-cyan-500/20 text-cyan-100"
-                  : "border-sky-200/30 bg-slate-900/60 text-sky-100/80 hover:bg-slate-800/70"
-              } ${status === "searching" ? "cursor-not-allowed opacity-60" : ""}`}
-            >
-              <p className="font-bold">{BOARD_LABEL[size]}</p>
-              <p className="mt-1 text-xs opacity-80">Chế độ tìm trận công khai</p>
-            </button>
-          ))}
-        </section>
+        <p className="mt-2 text-sky-100/75">Bảng 10x10 với 20 quả bom - Tìm đối thủ cùng trình độ</p>
 
         <section className="mt-6 rounded-xl border border-sky-200/25 bg-slate-900/45 p-4">
-          <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div className="space-y-2 text-sm">
             <span className="inline-flex items-center gap-2"><Shield className="size-4" /> Người chơi: {user?.name || user?.username || user?.email || "-"}</span>
-            <span className="inline-flex items-center gap-2"><Swords className="size-4" /> Trạng thái: {status === "idle" ? "Sẵn sàng" : status === "searching" ? "Đang tìm đối thủ" : status === "matched" ? "Đã ghép trận" : "Lỗi"}</span>
-            <span className="inline-flex items-center gap-2"><Timer className="size-4" /> Thời gian chờ: {elapsed}s</span>
+            <div className="mt-3 flex flex-wrap gap-4">
+              <span className="inline-flex items-center gap-2"><Swords className="size-4" /> Trạng thái: {status === "idle" ? "Sẵn sàng" : status === "searching" ? "Đang tìm đối thủ" : status === "matched" ? "Đã ghép trận" : "Lỗi"}</span>
+              <span className="inline-flex items-center gap-2"><Timer className="size-4" /> Thời gian chờ: {elapsed}s</span>
+            </div>
           </div>
         </section>
 
