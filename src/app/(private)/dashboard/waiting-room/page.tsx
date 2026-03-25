@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { createPrivateMatch, leaveMatch } from "@/src/lib/api/match";
+import { createPrivateMatch, leaveMatch, getMatchState, MatchPlayer } from "@/src/lib/api/match";
 import { getMyProfile } from "@/src/lib/api/auth";
 import { RoomPinSection } from "@/src/components/dashboard/waiting-room/RoomPinSection";
 import { PlayerStatusSection } from "@/src/components/dashboard/waiting-room/PlayerStatusSection";
@@ -22,6 +22,9 @@ export default function WaitingRoomPage() {
   const [roomPin, setRoomPin] = useState("----");
   const [playerName, setPlayerName] = useState("Người chơi");
   const [opponentName, setOpponentName] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [hostPlayer, setHostPlayer] = useState<MatchPlayer | null>(null);
+  const [opponentPlayer, setOpponentPlayer] = useState<MatchPlayer | null>(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -88,6 +91,8 @@ export default function WaitingRoomPage() {
             return;
           }
 
+          setCurrentUserId(profile._id);
+
           const displayName =
             profile.name?.trim() || profile.username?.trim() || profile.email;
           if (displayName) {
@@ -128,6 +133,69 @@ export default function WaitingRoomPage() {
       isMounted = false;
     };
   }, []);
+
+  const syncMatchState = async () => {
+    if (!roomId) {
+      return;
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      console.warn("No access token for match state sync");
+      return;
+    }
+
+    try {
+      const state = await getMatchState(roomId, accessToken);
+      if (state.pinCode) {
+        setRoomPin(state.pinCode);
+        localStorage.setItem(ROOM_PIN_STORAGE_KEY, state.pinCode);
+      }
+
+      if (state.players && state.players.length > 0) {
+        const host = state.players.find((p) => p.playerNumber === 1) ?? state.players[0];
+        const opponent = state.players.find((p) => p.playerNumber !== host?.playerNumber);
+
+        if (host) {
+          setHostPlayer(host);
+          if (host.displayName) {
+            // if current user is host or no more accurate data
+            if (host.userId === currentUserId) {
+              setPlayerName(host.displayName);
+            }
+          }
+        }
+
+        if (opponent) {
+          setOpponentPlayer(opponent);
+          setOpponentName(opponent.displayName);
+        } else {
+          setOpponentPlayer(null);
+          setOpponentName(null);
+        }
+
+        if (currentUserId) {
+          const me = state.players.find((p) => p.userId === currentUserId);
+          if (me?.displayName) {
+            setPlayerName(me.displayName);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("fetch match state error", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    syncMatchState();
+    const interval = setInterval(syncMatchState, 4000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [roomId, currentUserId]);
 
   // ĐÃ SỬA LẠI HOÀN TOÀN THÀNH STOMP + SOCKJS CHO SPRING BOOT
   useEffect(() => {
@@ -280,8 +348,8 @@ export default function WaitingRoomPage() {
           />
 
           <PlayerStatusSection
-            playerName={playerName}
-            opponentName={opponentName}
+            host={hostPlayer ?? { userId: currentUserId ?? "", displayName: playerName, avatar: "", isReady: true }}
+            opponent={opponentPlayer}
           />
 
           <MatchSettingsSection />
