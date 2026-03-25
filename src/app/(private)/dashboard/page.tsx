@@ -7,52 +7,59 @@ import { CommandCard } from "@/src/components/dashboard/CommandCard";
 import { ProfileCard } from "@/src/components/dashboard/ProfileCard";
 import { JoinRoomModal } from "@/src/components/dashboard/JoinRoomModal";
 import { useDashboardData } from "@/src/lib/hooks/useDashboardData";
+import { createPrivateMatch } from "@/src/lib/api/match";
+
+const ROOM_PIN_STORAGE_KEY = "currentRoomPin";
+const ROOM_ID_STORAGE_KEY = "currentMatchId";
+const LEFT_ROOM_FLAG = "leftRoom";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
   const { data, loading, error } = useDashboardData();
   const [isJoinRoomModalOpen, setIsJoinRoomModalOpen] = useState(false);
 
   const handleCommand = useCallback(
-    (commandId: string) => {
-      switch (commandId) {
-        case "create-room":
-          router.push("/waiting-room");
-          break;
-        case "join-room":
-          setIsJoinRoomModalOpen(true);
-          break;
-        case "quick-match":
-          console.log("Quick match clicked");
-          break;
-        case "match-history":
-          console.log("Match history clicked");
-          break;
-        default:
-          break;
-      }
-    },
-    [router],
-  );
+    async (commandId: string) => {
+      if (commandId === "create-room") {
+        if (creatingRoom) return;
 
-  const handleJoinRoomSubmit = async (pinCode: string) => {
-    try {
-      console.log("Joining room with PIN:", pinCode);
-      // TODO: Call API to join room
-      // const response = await fetch(`/api/matches/join`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ pinCode })
-      // });
-      // if (!response.ok) throw new Error('Failed to join room');
-      // const result = await response.json();
-      // Redirect to game or handle success
-    } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : "Failed to join room",
-      );
-    }
-  };
+        setCreatingRoom(true);
+        setRoomError(null);
+
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+          setRoomError("Thiếu access token. Vui lòng đăng nhập lại.");
+          setCreatingRoom(false);
+          return;
+        }
+
+        try {
+          const room = await createPrivateMatch(accessToken);
+          if (room.pinCode) {
+            localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
+          }
+          if (room.matchId) {
+            localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
+          }
+          localStorage.setItem(LEFT_ROOM_FLAG, "false");
+          router.push("/dashboard/waiting-room");
+        } catch (err: unknown) {
+          setRoomError(
+            err instanceof Error ? err.message : "Không thể tạo phòng.",
+          );
+          console.error("Create room failed", err);
+        } finally {
+          setCreatingRoom(false);
+        }
+
+        return;
+      }
+      console.log("Command clicked:", commandId);
+    },
+    [creatingRoom, router],
+  );
 
   if (loading) {
     return (
@@ -82,6 +89,11 @@ export default function DashboardPage() {
             <h2 className="mb-5 text-3xl font-bold tracking-widest text-cyan-300">
               COMMAND CENTER
             </h2>
+            {roomError && (
+              <div className="mb-4 rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm font-medium text-red-200">
+                {roomError}
+              </div>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               {data.commands.map((card) => (
                 <CommandCard
@@ -94,13 +106,6 @@ export default function DashboardPage() {
           </article>
         </section>
       </div>
-
-      {/* Join Room Modal */}
-      <JoinRoomModal
-        isOpen={isJoinRoomModalOpen}
-        onClose={() => setIsJoinRoomModalOpen(false)}
-        onSubmit={handleJoinRoomSubmit}
-      />
     </main>
   );
 }
