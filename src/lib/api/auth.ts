@@ -10,7 +10,12 @@ type BaseResponse<T> = {
 };
 
 export type LoginPayload = { email: string; password: string };
-export type RegisterPayload = { name?: string; username?: string; email: string; password: string };
+export type RegisterPayload = {
+  name?: string;
+  username?: string;
+  email: string;
+  password: string;
+};
 export type ProfileResponse = {
   _id: string;
   username: string;
@@ -25,7 +30,10 @@ export async function login(payload: LoginPayload) {
     body: JSON.stringify(payload),
   });
 
-  const body = (await res.json()) as BaseResponse<{ accessToken: string; refreshToken: string }>;
+  const body = (await res.json()) as BaseResponse<{
+    accessToken: string;
+    refreshToken: string;
+  }>;
   if (!res.ok || !body.success) {
     throw new Error(body.message || `Login failed: ${res.status}`);
   }
@@ -55,7 +63,10 @@ export async function refreshToken(refreshToken: string) {
     body: JSON.stringify({ refreshToken }),
   });
 
-  const body = (await res.json()) as BaseResponse<{ accessToken: string; refreshToken: string }>;
+  const body = (await res.json()) as BaseResponse<{
+    accessToken: string;
+    refreshToken: string;
+  }>;
   if (!res.ok || !body.success) {
     throw new Error(body.message || `Refresh failed: ${res.status}`);
   }
@@ -93,4 +104,31 @@ export async function getMyProfile(accessToken: string) {
   }
 
   return body.data;
+}
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export async function changePassword(
+  accessToken: string,
+  payload: ChangePasswordPayload,
+) {
+  const res = await fetch(`${BASE_URL}/api/auth/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const body = (await res.json()) as BaseResponse<null>;
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || `Change password failed: ${res.status}`);
+  }
+
+  return body;
 }

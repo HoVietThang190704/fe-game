@@ -34,6 +34,7 @@ import { Button } from "@/src/components/ui/button";
 import { SettingsHeaderCard } from "@/components/dashboard/settings/SettingsHeaderCard";
 import { GameSettingsCard } from "@/components/dashboard/settings/GameSettingsCard";
 import { AccountSettingsCard } from "@/components/dashboard/settings/AccountSettingsCard";
+import { ChangePasswordCard } from "@/components/dashboard/settings/ChangePasswordCard";
 import { InfoCard } from "@/components/dashboard/settings/InfoCard";
 
 export default function SettingsPage() {
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [mounted, setMounted] = React.useState(false);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
   const [language, setLanguage] = React.useState("vi");
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -71,7 +73,9 @@ export default function SettingsPage() {
           language={language}
           setLanguage={setLanguage}
         />
-        <AccountSettingsCard />
+        <AccountSettingsCard
+          onChangePasswordClick={() => setIsChangePasswordOpen(true)}
+        />
         <InfoCard />
 
         <Button
@@ -83,6 +87,11 @@ export default function SettingsPage() {
           Đăng xuất
         </Button>
       </div>
+
+      <ChangePasswordCard
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </main>
   );
 }
