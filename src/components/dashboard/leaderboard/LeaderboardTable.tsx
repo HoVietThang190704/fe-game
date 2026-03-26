@@ -31,26 +31,46 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ players, currentUse
           </tr>
         </thead>
         <tbody>
-          {players.map((p) => (
-            <tr
-              key={p.rank}
-              className={
-                p.isCurrentUser
-                  ? 'bg-cyan-900/60 font-bold'
-                  : 'hover:bg-slate-800 transition-colors'
-              }
-            >
-              <td className="px-4 py-2">#{p.rank}</td>
-              <td className="px-4 py-2 flex items-center gap-2">
-                <img src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover" />
-                {p.name}
-              </td>
-              <td className="px-4 py-2 text-cyan-300 font-semibold">{p.elo}</td>
-              <td className="px-4 py-2 text-cyan-400 font-semibold hidden md:table-cell">{p.wins}</td>
-              <td className="px-4 py-2 text-cyan-600 font-semibold hidden md:table-cell">{p.losses}</td>
-              <td className="px-4 py-2">{p.winRate}%</td>
-            </tr>
-          ))}
+          {Array.from({ length: 7 }).map((_, idx) => {
+            const p = players[idx];
+            const displayRank = idx + 4;
+            if (p) {
+              const uniqueKey = `${displayRank}-${p.name}`;
+              return (
+                <tr
+                  key={uniqueKey}
+                  className={
+                    p.isCurrentUser
+                      ? 'bg-cyan-900/60 font-bold'
+                      : 'hover:bg-slate-800 transition-colors'
+                  }
+                >
+                  <td className="px-4 py-2">#{displayRank}</td>
+                  <td className="px-4 py-2 flex items-center gap-2">
+                    {!!p.avatar ? (
+                      <img src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover" />
+                    ) : null}
+                    {p.name}
+                  </td>
+                  <td className="px-4 py-2 text-cyan-300 font-semibold">{p.elo}</td>
+                  <td className="px-4 py-2 text-cyan-400 font-semibold hidden md:table-cell">{p.wins}</td>
+                  <td className="px-4 py-2 text-cyan-600 font-semibold hidden md:table-cell">{p.losses}</td>
+                  <td className="px-4 py-2">{p.winRate}%</td>
+                </tr>
+              );
+            } else {
+              return (
+                <tr key={`empty-${displayRank}`} className="text-cyan-700/60">
+                  <td className="px-4 py-2">#{displayRank}</td>
+                  <td className="px-4 py-2 flex items-center gap-2 italic">—</td>
+                  <td className="px-4 py-2">—</td>
+                  <td className="px-4 py-2 hidden md:table-cell">—</td>
+                  <td className="px-4 py-2 hidden md:table-cell">—</td>
+                  <td className="px-4 py-2">—</td>
+                </tr>
+              );
+            }
+          })}
         </tbody>
       </table>
     </div>

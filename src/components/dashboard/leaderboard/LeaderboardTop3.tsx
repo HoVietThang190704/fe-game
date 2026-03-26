@@ -35,15 +35,19 @@ const LeaderboardTop3: React.FC<LeaderboardTop3Props> = ({ players }) => {
         const p = players[idx];
         if (!p) return <div key={i} className="flex-1" />;
         const isCenter = idx === 0;
+        // Dùng key duy nhất: userId nếu có, nếu không thì dùng combination rank+name
+        const uniqueKey = `${p.rank}-${p.name}`;
         return (
           <div
-            key={p.rank}
+            key={uniqueKey}
             className={`flex flex-col items-center flex-1 ${isCenter ? 'scale-110 z-10' : 'scale-100'} transition-transform`}
           >
             <div
               className={`rounded-full border-4 ${borderColors[idx]} bg-gradient-to-b ${medalColors[idx]} w-24 h-24 flex items-center justify-center mb-2 shadow-lg`}
             >
-              <img src={p.avatar} alt={p.name} className="w-20 h-20 rounded-full object-cover" />
+              {!!p.avatar ? (
+                <img src={p.avatar} alt={p.name} className="w-20 h-20 rounded-full object-cover" />
+              ) : null}
             </div>
             <div className="font-bold text-lg text-cyan-100 mb-1">{p.name}</div>
             <div className="text-cyan-300 font-bold text-xl">{p.elo}</div>

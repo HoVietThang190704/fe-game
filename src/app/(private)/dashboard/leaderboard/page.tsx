@@ -1,108 +1,51 @@
 'use client';
-import React from 'react';
+
+import { useEffect, useState } from 'react';
+
+import LeaderboardBackButton from '@/components/dashboard/leaderboard/LeaderboardBackButton';
 import LeaderboardTop3 from '@/components/dashboard/leaderboard/LeaderboardTop3';
 import LeaderboardTable from '@/components/dashboard/leaderboard/LeaderboardTable';
 import LeaderboardUserBar from '@/components/dashboard/leaderboard/LeaderboardUserBar';
-import LeaderboardBackButton from '@/components/dashboard/leaderboard/LeaderboardBackButton';
-
-const players = [
-  {
-    rank: 1,
-    avatar: '/images/avatars/mineking.png',
-    name: 'MineKing',
-    elo: 2150,
-    winRate: 78.2,
-    wins: 245,
-    losses: 68,
-  },
-  {
-    rank: 2,
-    avatar: '/images/avatars/bombmaster.png',
-    name: 'BombMaster',
-    elo: 2048,
-    winRate: 69.5,
-    wins: 199,
-    losses: 87,
-  },
-  {
-    rank: 3,
-    avatar: '/images/avatars/prosweeper.png',
-    name: 'ProSweeper',
-    elo: 1987,
-    winRate: 64.9,
-    wins: 170,
-    losses: 92,
-  },
-  // ...
-  {
-    rank: 4,
-    avatar: '/images/avatars/speedrunner.png',
-    name: 'SpeedRunner',
-    elo: 1865,
-    winRate: 64.2,
-    wins: 156,
-    losses: 87,
-  },
-  {
-    rank: 5,
-    avatar: '/images/avatars/tacticalgamer.png',
-    name: 'TacticalGamer',
-    elo: 1789,
-    winRate: 60.9,
-    wins: 142,
-    losses: 91,
-  },
-  {
-    rank: 6,
-    avatar: '/images/avatars/minelegend.png',
-    name: 'MineLegend',
-    elo: 1724,
-    winRate: 58.3,
-    wins: 134,
-    losses: 96,
-  },
-  {
-    rank: 7,
-    avatar: '/images/avatars/sweeperpro.png',
-    name: 'SweeperPro',
-    elo: 1678,
-    winRate: 55.1,
-    wins: 128,
-    losses: 104,
-  },
-  {
-    rank: 8,
-    avatar: '/images/avatars/player123.png',
-    name: 'Player123 (Bạn)',
-    elo: 1285,
-    winRate: 65.5,
-    wins: 89,
-    losses: 47,
-    isCurrentUser: true,
-  },
-  {
-    rank: 9,
-    avatar: '/images/avatars/bombhunter.png',
-    name: 'BombHunter',
-    elo: 1245,
-    winRate: 57.1,
-    wins: 89,
-    losses: 67,
-  },
-  {
-    rank: 10,
-    avatar: '/images/avatars/quickdmine.png',
-    name: 'QuickdMine',
-    elo: 1198,
-    winRate: 57.6,
-    wins: 76,
-    losses: 56,
-  },
-];
-
-const currentUser = players.find((p) => p.isCurrentUser) || players[7];
+import { fetchLeaderboard, mapLeaderboardToPlayers } from '@/lib/api/leaderboard';
+import { Player } from '@/components/dashboard/leaderboard/Leaderboard.types';
 
 const LeaderboardPage = () => {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [currentUser, setCurrentUser] = useState<Player | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Lấy token động từ localStorage
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') || undefined : undefined;
+        const res = await fetchLeaderboard(token);
+        // Nếu backend trả về userId hiện tại, có thể lấy từ token hoặc context
+        const userId = undefined;
+        const mapped = mapLeaderboardToPlayers(res.data, userId);
+        setPlayers(mapped);
+        // Tìm user hiện tại nếu có
+        setCurrentUser(mapped.find((p) => p.isCurrentUser) || mapped[0] || null);
+      } catch (e: any) {
+        setError(e.message || 'Lỗi không xác định');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="text-cyan-200 text-center py-10">Đang tải bảng xếp hạng...</div>;
+  if (error) return <div className="text-red-400 text-center py-10">{error}</div>;
+  if (!players.length) return <div className="text-cyan-200 text-center py-10">Không có dữ liệu bảng xếp hạng.</div>;
+
+  // Nếu backend trả về userPosition, có thể dùng để highlight
+  const userRank = currentUser?.rank || 0;
+
+
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-[#0f172a] to-[#1e293b] pb-24">
       <LeaderboardBackButton />
@@ -114,14 +57,17 @@ const LeaderboardPage = () => {
           <div className="text-cyan-100 text-sm opacity-80">Top những người chơi xuất sắc nhất</div>
         </div>
         <LeaderboardTop3 players={players.slice(0, 3)} />
-        <LeaderboardTable players={players.slice(3)} currentUserRank={currentUser.rank} />
+        {/* Chỉ truyền top 4-10 vào bảng danh sách */}
+        <LeaderboardTable players={players.slice(3, 10)} currentUserRank={userRank} />
       </div>
-      <LeaderboardUserBar
-        rank={currentUser.rank}
-        onProfileClick={() => {
-          window.location.href = '/dashboard/myprofile';
-        }}
-      />
+      {currentUser && (
+        <LeaderboardUserBar
+          rank={currentUser.rank}
+          onProfileClick={() => {
+            window.location.href = '/dashboard/myprofile';
+          }}
+        />
+      )}
     </div>
   );
 };
