@@ -24,6 +24,7 @@ interface GamePlayPhaseProps {
     opponentMisses: number;
   };
   onPowerUse?: (boardSide: "left" | "right", powerIndex: 1 | 2 | 3) => void;
+  turnTimeLeft?: number;
 }
 
 export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
@@ -42,6 +43,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
     opponentMisses: 0,
   },
   onPowerUse,
+  turnTimeLeft = 60,
 }) => {
   const isYourTurn = currentPlayer === "you";
 
@@ -61,6 +63,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             {isYourTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
           </span>
         </div>
+        <p className="text-sky-200/80 text-sm">Turn time left: {turnTimeLeft}s</p>
       </div>
 
       {/* Game Boards */}

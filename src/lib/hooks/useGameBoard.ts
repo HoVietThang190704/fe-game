@@ -77,11 +77,28 @@ export function useGameBoard(mineCount: number = 20) {
     setBoard(createEmptyBoard(mineCount));
   }, [mineCount]);
 
+  const setCellState = useCallback((cellId: string, state: "revealed" | "flagged" | "hit" | "missed") => {
+    setBoard((prev) => {
+      const [row, col] = cellId.split("-").map(Number);
+      if (Number.isNaN(row) || Number.isNaN(col) || !prev.cells[row] || !prev.cells[row][col]) {
+        return prev;
+      }
+
+      const next = {
+        ...prev,
+        cells: prev.cells.map((r) => r.map((c) => ({ ...c }))),
+      };
+      next.cells[row][col].state = state;
+      return next;
+    });
+  }, []);
+
   return {
     board,
     placeMinesOnBoard,
     reveal,
     flag,
+    setCellState,
     reset,
   };
 }
