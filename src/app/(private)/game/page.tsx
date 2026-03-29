@@ -9,9 +9,10 @@ import { useGameLogic } from "@/src/lib/hooks/useGameLogic";
 import { useGame } from "@/src/lib/context/GameContext";
 import { getActiveMatch } from "@/src/lib/api/match";
 import { Spinner } from "@/src/components/ui/spinner";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function GamePageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const matchId = searchParams.get("matchId") || "default-match";
   const userId = searchParams.get("userId") || "default-user";
@@ -22,7 +23,11 @@ function GamePageContent() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [countdownLeft, setCountdownLeft] = useState(3);
   const [hearts, setHearts] = useState({ you: 3, opponent: 3 });
+  const [shields, setShields] = useState({ you: true, opponent: true });
   const [winner, setWinner] = useState<"you" | "opponent" | null>(null);
+  const [winnerEloDelta, setWinnerEloDelta] = useState(20);
+  const [loserEloDelta, setLoserEloDelta] = useState(-10);
+  const [shieldNotice, setShieldNotice] = useState<string | null>(null);
   const { updateGameState } = useGame();
 
   // Setup phase
@@ -70,11 +75,31 @@ function GamePageContent() {
         return;
       }
 
-      targetBoard.setCellState(cellId, payload?.result === "bomb" ? "hit" : "missed");
+      if (payload?.result === "bomb") {
+        targetBoard.setCellState(cellId, "hit");
+      } else if (payload?.result === "shield_blocked") {
+        targetBoard.setCellState(cellId, "hit");
+      } else if (Array.isArray(payload?.revealedCells) && payload.revealedCells.length > 0) {
+        targetBoard.setRevealedCells(payload.revealedCells);
+      } else {
+        targetBoard.setCellState(cellId, "revealed");
+      }
+
+      if (payload?.shieldBlocked) {
+        setShields((prev) => ({
+          ...prev,
+          [isYourMove ? "you" : "opponent"]: false,
+        }));
+        setShieldNotice(isYourMove
+          ? "Energy Shield cua ban da chan 1 qua bom!"
+          : "Doi thu da kich hoat Energy Shield va chan 1 qua bom!");
+      }
 
       if (isYourMove) {
         if (payload?.result === "bomb") {
           setHearts((prev) => ({ ...prev, you: payload?.health ?? Math.max(0, prev.you - 1) }));
+          setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
+        } else if (payload?.result === "shield_blocked") {
           setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
         } else {
           setStats((prev) => ({ ...prev, playerMisses: prev.playerMisses + 1 }));
@@ -82,6 +107,8 @@ function GamePageContent() {
       } else {
         if (payload?.result === "bomb") {
           setHearts((prev) => ({ ...prev, opponent: payload?.health ?? Math.max(0, prev.opponent - 1) }));
+          setStats((prev) => ({ ...prev, opponentHits: prev.opponentHits + 1 }));
+        } else if (payload?.result === "shield_blocked") {
           setStats((prev) => ({ ...prev, opponentHits: prev.opponentHits + 1 }));
         } else {
           setStats((prev) => ({ ...prev, opponentMisses: prev.opponentMisses + 1 }));
@@ -104,6 +131,8 @@ function GamePageContent() {
     onGameOver: (payload) => {
       const winnerSide = payload?.winnerId === userId ? "you" : "opponent";
       setWinner(winnerSide);
+      setWinnerEloDelta(payload?.winnerEloDelta ?? 20);
+      setLoserEloDelta(payload?.loserEloDelta ?? -10);
       setGamePhase("finished");
     },
   });
@@ -183,6 +212,27 @@ function GamePageContent() {
   );
 
   useEffect(() => {
+    if (!shieldNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShieldNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [shieldNotice]);
+
+  useEffect(() => {
+    if (gamePhase !== "finished") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      router.push("/dashboard");
+    }, 3500);
+
+    return () => window.clearTimeout(timer);
+  }, [gamePhase, router]);
+
+  useEffect(() => {
     if (gamePhase !== "countdown") {
       return;
     }
@@ -259,6 +309,10 @@ function GamePageContent() {
     setTimeLeft(60);
     setCountdownLeft(3);
     setHearts({ you: 3, opponent: 3 });
+    setShields({ you: true, opponent: true });
+    setWinnerEloDelta(20);
+    setLoserEloDelta(-10);
+    setShieldNotice(null);
     setWinner(null);
     yourBoard.reset();
     opponentBoard.reset();
@@ -273,6 +327,11 @@ function GamePageContent() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_20%_15%,_rgba(5,209,255,0.16),_rgba(8,30,54,0.92)_60%)] text-sky-200 p-4 sm:p-6">
       <div className="mx-auto max-w-[1600px]">
+        {shieldNotice && gamePhase === "playing" && (
+          <section className="mx-auto mb-4 max-w-2xl rounded-lg border border-sky-300/40 bg-sky-900/35 p-3 text-center text-sm font-semibold text-sky-100">
+            {shieldNotice}
+          </section>
+        )}
         {gamePhase === "setup" ? (
           <MineSetupPhase
             board={yourBoard.board}
@@ -316,6 +375,8 @@ function GamePageContent() {
               winRate: 55,
               hearts: hearts.opponent,
             }}
+            playerShieldAvailable={shields.you}
+            opponentShieldAvailable={shields.opponent}
             onPowerUse={handlePowerUse}
             turnTimeLeft={timeLeft}
           />
@@ -325,6 +386,12 @@ function GamePageContent() {
             <p className="mt-3 text-sky-100/80">
               {winner === "you" ? "Ban da chien thang!" : "Ban da thua. Thu lai van may nao!"}
             </p>
+            <div className="mt-6 rounded-lg border border-sky-400/20 bg-slate-900/40 p-4 text-left">
+              <p className="text-sm text-sky-300">Ket qua ELO</p>
+              <p className="mt-2 text-base text-emerald-300">Nguoi thang: +{winnerEloDelta} ELO</p>
+              <p className="text-base text-rose-300">Nguoi thua: {loserEloDelta} ELO</p>
+              <p className="mt-3 text-xs text-sky-200/70">Dang quay ve dashboard trong vai giay...</p>
+            </div>
             <button
               onClick={handleReset}
               className="mt-6 rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-5 py-2 text-cyan-100 hover:bg-cyan-500/30"

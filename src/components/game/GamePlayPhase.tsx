@@ -25,6 +25,8 @@ interface GamePlayPhaseProps {
   };
   onPowerUse?: (boardSide: "left" | "right", powerIndex: 1 | 2 | 3) => void;
   turnTimeLeft?: number;
+  playerShieldAvailable?: boolean;
+  opponentShieldAvailable?: boolean;
 }
 
 export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
@@ -44,6 +46,8 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
   },
   onPowerUse,
   turnTimeLeft = 60,
+  playerShieldAvailable = true,
+  opponentShieldAvailable = true,
 }) => {
   const isYourTurn = currentPlayer === "you";
 
@@ -92,6 +96,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             onPower2={() => onPowerUse?.("left", 2)}
             onPower3={() => onPowerUse?.("left", 3)}
             disabled={!isYourTurn}
+            shieldAvailable={playerShieldAvailable}
           />
 
           {/* Your Stats (Attack Results) */}
@@ -129,6 +134,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             onPower2={() => onPowerUse?.("right", 2)}
             onPower3={() => onPowerUse?.("right", 3)}
             disabled={currentPlayer !== "opponent"}
+            shieldAvailable={opponentShieldAvailable}
           />
 
           {/* Opponent Stats (Defense Results) */}
