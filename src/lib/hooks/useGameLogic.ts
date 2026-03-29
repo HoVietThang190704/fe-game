@@ -1,19 +1,37 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useGameWebSocket } from './useGameWebSocket';
 import { useGame, GameMove } from '@/src/lib/context/GameContext';
 
-export const useGameLogic = (matchId: string, userId: string) => {
-  const { gameState, updateGameState, addMove } = useGame();
+interface GameLogicOptions {
+  onStartGame?: (payload: any) => void;
+  onMoveResult?: (payload: any) => void;
+  onTurnSwitched?: (payload: any) => void;
+  onTurnTimeout?: (payload: any) => void;
+  onGameOver?: (payload: any) => void;
+  onReadyUpdate?: (payload: any) => void;
+}
+
+export const useGameLogic = (matchId: string, userId: string, options: GameLogicOptions = {}) => {
+  const { updateGameState, addMove } = useGame();
   const { send, isConnected } = useGameWebSocket({
+    matchId,
+    onConnect: () => {
+      send('/app/join_room', { matchId });
+    },
     onMessage: (message) => {
-      if (message.type === 'GAME_START') {
-        updateGameState({ status: 'PLAYING', gameBoard: message.payload });
-      } else if (message.type === 'FLAG_TOGGLED') {
-        updateGameState({ gameBoard: message.payload });
-      } else if (message.type === 'MOVE_RESULT') {
-        updateGameState({ gameBoard: message.payload });
-      } else if (message.type === 'GAME_OVER') {
-        updateGameState({ status: 'FINISHED', winnerId: message.payload.winnerId });
+      if (message.type === 'start_game') {
+        options.onStartGame?.(message.payload);
+      } else if (message.type === 'move_result') {
+        options.onMoveResult?.(message.payload);
+      } else if (message.type === 'turn_switched') {
+        options.onTurnSwitched?.(message.payload);
+      } else if (message.type === 'turn_timeout') {
+        options.onTurnTimeout?.(message.payload);
+      } else if (message.type === 'game_over') {
+        updateGameState({ status: 'FINISHED', winnerId: message.payload?.winnerId });
+        options.onGameOver?.(message.payload);
+      } else if (message.type === 'ready_update') {
+        options.onReadyUpdate?.(message.payload);
       }
     },
   });
@@ -28,10 +46,10 @@ export const useGameLogic = (matchId: string, userId: string) => {
         timestamp: Date.now(),
       };
 
-      send('/app/match.placeBombs', {
+      send('/app/place_bombs', {
         matchId,
         userId,
-        bombs: bombs.map((b) => ({ x: b.x, y: b.y })),
+        bombs,
       });
 
       addMove(move);
@@ -50,11 +68,12 @@ export const useGameLogic = (matchId: string, userId: string) => {
         timestamp: Date.now(),
       };
 
-      send('/app/match.revealCell', {
+      send('/app/send_move', {
         matchId,
         userId,
         x,
         y,
+        action: 'open',
       });
 
       addMove(move);
@@ -73,11 +92,12 @@ export const useGameLogic = (matchId: string, userId: string) => {
         timestamp: Date.now(),
       };
 
-      send('/app/match.toggleFlag', {
+      send('/app/send_move', {
         matchId,
         userId,
         x,
         y,
+        action: 'flag',
       });
 
       addMove(move);

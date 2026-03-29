@@ -77,11 +77,55 @@ export function useGameBoard(mineCount: number = 20) {
     setBoard(createEmptyBoard(mineCount));
   }, [mineCount]);
 
+  const setCellState = useCallback((cellId: string, state: "revealed" | "flagged" | "hit" | "missed") => {
+    setBoard((prev) => {
+      const [row, col] = cellId.split("-").map(Number);
+      if (Number.isNaN(row) || Number.isNaN(col) || !prev.cells[row] || !prev.cells[row][col]) {
+        return prev;
+      }
+
+      const next = {
+        ...prev,
+        cells: prev.cells.map((r) => r.map((c) => ({ ...c }))),
+      };
+      next.cells[row][col].state = state;
+      return next;
+    });
+  }, []);
+
+  const setRevealedCells = useCallback((cells: Array<{ x: number; y: number; adjacentMines: number }>) => {
+    setBoard((prev) => {
+      if (!Array.isArray(cells) || cells.length === 0) {
+        return prev;
+      }
+
+      const next = {
+        ...prev,
+        cells: prev.cells.map((r) => r.map((c) => ({ ...c }))),
+      };
+
+      for (const cell of cells) {
+        const row = cell?.x;
+        const col = cell?.y;
+        if (Number.isNaN(row) || Number.isNaN(col) || !next.cells[row] || !next.cells[row][col]) {
+          continue;
+        }
+
+        next.cells[row][col].state = "revealed";
+        next.cells[row][col].adjacentMines = Number.isFinite(cell?.adjacentMines) ? cell.adjacentMines : 0;
+      }
+
+      return next;
+    });
+  }, []);
+
   return {
     board,
     placeMinesOnBoard,
     reveal,
     flag,
+    setCellState,
+    setRevealedCells,
     reset,
   };
 }

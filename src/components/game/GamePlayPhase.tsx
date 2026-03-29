@@ -30,6 +30,9 @@ interface GamePlayPhaseProps {
     opponentMisses: number;
   };
   onPowerUse?: (boardSide: "left" | "right", powerIndex: 1 | 2 | 3) => void;
+  turnTimeLeft?: number;
+  playerShieldAvailable?: boolean;
+  opponentShieldAvailable?: boolean;
 }
 
 export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
@@ -52,6 +55,9 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
     opponentMisses: 0,
   },
   onPowerUse,
+  turnTimeLeft = 60,
+  playerShieldAvailable = true,
+  opponentShieldAvailable = true,
 }) => {
   const isYourTurn = currentPlayer === "you";
 
@@ -105,13 +111,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             {isYourTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
           </span>
         </div>
-
-        {/* Timer in Center */}
-        <div className="flex-1 flex justify-center">
-          <TurnTimer isActive={isYourTurn} onTimeout={onTimeOut} duration={60} />
-        </div>
-
-        <div className="w-32"></div>
+        <p className="text-sky-200/80 text-sm">Turn time left: {turnTimeLeft}s</p>
       </div>
 
       {/* Game Boards */}
@@ -140,6 +140,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             onPower2={() => onPowerUse?.("left", 2)}
             onPower3={() => onPowerUse?.("left", 3)}
             disabled={!isYourTurn}
+            shieldAvailable={playerShieldAvailable}
           />
         </div>
 
@@ -165,6 +166,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             onPower2={() => onPowerUse?.("right", 2)}
             onPower3={() => onPowerUse?.("right", 3)}
             disabled={currentPlayer !== "opponent"}
+            shieldAvailable={opponentShieldAvailable}
           />
         </div>
       </div>

@@ -8,6 +8,9 @@ import { HPDisplay } from "./HPDisplay";
 export interface PlayerCardData {
   username: string;
   avatar_url?: string;
+  elo?: number;
+  winRate?: number;
+  hearts?: number;
 }
 
 interface GamePlayerInfoProps {
@@ -54,9 +57,27 @@ export const GamePlayerInfo: React.FC<GamePlayerInfoProps> = ({
         </div>
       </div>
 
-      {/* HP Display */}
-      <div className="flex-shrink-0">
-        <HPDisplay hp={hp} maxHP={3} />
+        {/* Stats */}
+        <div className="flex gap-3 text-xs sm:text-sm">
+          {player.hearts !== undefined && (
+            <div className="px-3 py-1 rounded-lg bg-slate-900/40 border border-rose-500/30">
+              <span className="text-rose-300 font-bold">❤ {player.hearts}</span>
+              <span className="text-sky-200/60 ml-1">Hearts</span>
+            </div>
+          )}
+          {player.elo && (
+            <div className="px-3 py-1 rounded-lg bg-slate-900/40 border border-sky-500/30">
+              <span className="text-amber-400 font-bold">⚔️ {player.elo}</span>
+              <span className="text-sky-200/60 ml-1">ELO</span>
+            </div>
+          )}
+          {player.winRate !== undefined && (
+            <div className="px-3 py-1 rounded-lg bg-slate-900/40 border border-green-500/30">
+              <span className="text-lime-400 font-bold">{player.winRate}%</span>
+              <span className="text-sky-200/60 ml-1">Win</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

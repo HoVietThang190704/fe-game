@@ -9,6 +9,7 @@ interface PowerButtonsProps {
   onPower2?: () => void;
   onPower3?: () => void;
   disabled?: boolean;
+  shieldAvailable?: boolean;
 }
 
 export const PowerButtons: React.FC<PowerButtonsProps> = ({
@@ -16,6 +17,7 @@ export const PowerButtons: React.FC<PowerButtonsProps> = ({
   onPower2,
   onPower3,
   disabled = false,
+  shieldAvailable = true,
 }) => {
   return (
     <div className="flex gap-8 justify-center flex-wrap">
@@ -31,10 +33,14 @@ export const PowerButtons: React.FC<PowerButtonsProps> = ({
 
       <Button
         onClick={onPower2}
-        disabled={disabled}
-        className="w-24 h-24 rounded-full p-0 flex items-center justify-center bg-blue-600/40 hover:bg-blue-600/60 border-blue-500/50 text-blue-300 hover:text-blue-200 transition-all duration-200 hover:scale-110"
+        disabled={true}
+        className={`w-24 h-24 rounded-full p-0 flex items-center justify-center border transition-all duration-200 ${
+          shieldAvailable
+            ? "bg-blue-600/40 border-blue-500/50 text-blue-300"
+            : "bg-slate-700/40 border-slate-500/50 text-slate-400"
+        }`}
         variant="outline"
-        title="Power 2"
+        title={shieldAvailable ? "Energy Shield (Passive)" : "Energy Shield (Used)"}
       >
         <Shield className="w-10 h-10" />
       </Button>
