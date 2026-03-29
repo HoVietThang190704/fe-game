@@ -4,6 +4,8 @@ import React, { useCallback } from "react";
 import { GameBoardComponent } from "./GameBoard";
 import { GamePlayerInfo, type PlayerCardData } from "./GamePlayerInfo";
 import { PowerButtons } from "./PowerButtons";
+import { HPDisplay } from "./HPDisplay";
+import { TurnTimer } from "./TurnTimer";
 import type { GameBoard } from "../../app/(private)/game/game.types";
 import { Button } from "@/src/components/ui/button";
 import { RotateCcw, Zap } from "lucide-react";
@@ -17,6 +19,10 @@ interface GamePlayPhaseProps {
   onReset: () => void;
   playerData?: PlayerCardData;
   opponentData?: PlayerCardData;
+  playerHP?: number;
+  opponentHP?: number;
+  gameStatus?: "playing" | "won" | "lost";
+  onTimeOut?: () => void;
   stats?: {
     playerHits: number;
     playerMisses: number;
@@ -36,8 +42,12 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
   onCellClick,
   onCellRightClick,
   onReset,
-  playerData = { username: "You", elo: 1200, winRate: 55 },
-  opponentData = { username: "Opponent", elo: 1250, winRate: 58 },
+  playerData = { username: "You" },
+  opponentData = { username: "Opponent" },
+  playerHP = 3,
+  opponentHP = 3,
+  gameStatus = "playing",
+  onTimeOut,
   stats = {
     playerHits: 0,
     playerMisses: 0,
@@ -51,19 +61,53 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
 }) => {
   const isYourTurn = currentPlayer === "you";
 
+  // Show game end modal when game ends
+  if (gameStatus !== "playing") {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center">
+        <div
+          className={`text-center p-12 rounded-2xl border-4 max-w-2xl ${
+            gameStatus === "won"
+              ? "bg-green-900/50 border-green-500/70"
+              : "bg-red-900/50 border-red-500/70"
+          }`}
+        >
+          <h2 className={`text-7xl font-bold mb-6 ${
+            gameStatus === "won" ? "text-green-300" : "text-red-300"
+          }`}>
+            {gameStatus === "won" ? "🎉 VICTORY!" : "💀 DEFEAT!"}
+          </h2>
+          <p className={`text-2xl mb-8 ${
+            gameStatus === "won" ? "text-green-200" : "text-red-200"
+          }`}>
+            {gameStatus === "won"
+              ? "You found all opponent's mines!"
+              : "You ran out of HP!"}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="gap-2 bg-slate-700/50 hover:bg-slate-600/50 border-slate-500/50 px-8 py-3 text-lg"
+            variant="outline"
+          >
+            <RotateCcw className="w-5 h-5" />
+            Play Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="text-center space-y-3">
-        <h2 className="text-3xl sm:text-4xl font-bold text-cyan-300 tracking-wider">
-          MATCH
-        </h2>
-        <div className={`inline-block px-6 py-2 rounded-full border-2 ${
+      <div className="text-center flex items-center justify-between gap-4">
+        {/* Turn Indicator */}
+        <div className={`px-6 py-2 rounded-full border-2 ${
           isYourTurn
             ? "border-green-400/50 bg-green-600/20 text-green-300"
             : "border-amber-400/50 bg-amber-600/20 text-amber-300"
         }`}>
-          <span className="font-semibold">
+          <span className="font-semibold text-sm">
             {isYourTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
           </span>
         </div>
@@ -76,7 +120,7 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
         <div className="space-y-4">
           {/* Your Player Info */}
           <div className="rounded-xl bg-slate-900/50 border border-cyan-500/30 p-4 shadow-[0_0_24px_rgba(34,211,238,0.15)]">
-            <GamePlayerInfo player={playerData} />
+            <GamePlayerInfo player={playerData} hp={playerHP} />
           </div>
 
           {/* Your Board (Attack Opponent) */}
@@ -98,25 +142,13 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             disabled={!isYourTurn}
             shieldAvailable={playerShieldAvailable}
           />
-
-          {/* Your Stats (Attack Results) */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-2 text-center">
-              <p className="text-red-300 text-xs uppercase tracking-wider">Hits</p>
-              <p className="text-lg font-bold text-red-400">{stats.playerHits}</p>
-            </div>
-            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-2 text-center">
-              <p className="text-blue-300 text-xs uppercase tracking-wider">Misses</p>
-              <p className="text-lg font-bold text-blue-400">{stats.playerMisses}</p>
-            </div>
-          </div>
         </div>
 
         {/* Opponent board (right) */}
         <div className="space-y-4">
           {/* Opponent Player Info */}
           <div className="rounded-xl bg-slate-900/50 border border-amber-500/30 p-4 shadow-[0_0_24px_rgba(217,119,6,0.15)]">
-            <GamePlayerInfo player={opponentData} isOpponent={true} />
+            <GamePlayerInfo player={opponentData} hp={opponentHP} isOpponent={true} />
           </div>
 
           {/* Opponent Board (Your Defense) */}
@@ -136,18 +168,6 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             disabled={currentPlayer !== "opponent"}
             shieldAvailable={opponentShieldAvailable}
           />
-
-          {/* Opponent Stats (Defense Results) */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-2 text-center">
-              <p className="text-red-300 text-xs uppercase tracking-wider">Hits</p>
-              <p className="text-lg font-bold text-red-400">{stats.opponentHits}</p>
-            </div>
-            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-2 text-center">
-              <p className="text-blue-300 text-xs uppercase tracking-wider">Misses</p>
-              <p className="text-lg font-bold text-blue-400">{stats.opponentMisses}</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -162,18 +182,6 @@ export const GamePlayPhase: React.FC<GamePlayPhaseProps> = ({
             ? "Find opponent's mines - click on the board on the left"
             : "Waiting for opponent to find your mines..."}
         </p>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex justify-center">
-        <Button
-          onClick={onReset}
-          className="gap-2 bg-slate-700/50 hover:bg-slate-600/50 border-slate-500/50"
-          variant="outline"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Play Again
-        </Button>
       </div>
     </div>
   );

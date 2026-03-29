@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Trophy, Bell, Settings2, Zap } from "lucide-react";
 
 export function DashboardNavbar() {
@@ -34,13 +35,13 @@ export function DashboardNavbar() {
           <Bell className="h-5 w-5 fill-amber-400/10" />
         </button>
 
-        <button
+        <Link
+          href="/dashboard/settings"
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700/30 bg-slate-900/40 text-slate-400 transition-all hover:bg-slate-800 hover:text-slate-200"
           aria-label="Settings"
-          type="button"
         >
           <Settings2 className="h-5 w-5" />
-        </button>
+        </Link>
       </div>
     </header>
   );

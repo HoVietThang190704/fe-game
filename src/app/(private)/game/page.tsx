@@ -145,6 +145,11 @@ function GamePageContent() {
     opponentMisses: 0,
   });
 
+  // HP system (3 for each player)
+  const [playerHP, setPlayerHP] = useState(3);
+  const [opponentHP, setOpponentHP] = useState(3);
+  const [gameStatus, setGameStatus] = useState<"playing" | "won" | "lost">("playing");
+
   // Handle setup confirmation
   const handleSetupComplete = useCallback(() => {
     if (!isConnected) {
@@ -361,6 +366,10 @@ function GamePageContent() {
             onCellRightClick={handleOpponentCellRightClick}
             onReset={handleReset}
             stats={stats}
+            playerHP={playerHP}
+            opponentHP={opponentHP}
+            gameStatus={gameStatus}
+            onTimeOut={handleTimeOut}
             playerData={{
               username: "You",
               avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=you",

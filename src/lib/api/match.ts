@@ -14,6 +14,33 @@ export type CreatePrivateMatchResponse = {
   pinCode: string;
 };
 
+export type MatchPlayer = {
+  userId: string;
+  displayName: string;
+  avatar: string;
+  rank: number;
+  isReady: boolean;
+  playerNumber: number;
+  health: number;
+};
+
+export type MatchStateResponse = {
+  matchId: string | null;
+  pinCode: string;
+  status: string;
+  gameBoard: Record<string, unknown>;
+  players: MatchPlayer[];
+  boardState: {
+    player1Revealed: Array<{ x: number; y: number }>;
+    player2Revealed: Array<{ x: number; y: number }>;
+    player1Flags: Array<{ x: number; y: number }>;
+    player2Flags: Array<{ x: number; y: number }>;
+  };
+  currentTurn: string | null;
+  turnStartTime: string | null;
+  turnTimeLimit: number;
+};
+
 export type ActiveMatchResponse = {
   matchId: string;
   status: string;
@@ -48,25 +75,24 @@ export async function createPrivateMatch(accessToken: string) {
   return body.data;
 }
 
-export async function findRandomMatch(accessToken: string) {
+export async function findRandomMatch(accessToken: string): Promise<WaitingQueueResponse> {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_FIND}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({}),
   });
 
   const body = (await res.json()) as BaseResponse<WaitingQueueResponse>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Find match failed: ${res.status}`);
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Find random match failed: ${res.status}`);
   }
 
-  return body.data ?? null;
+  return body.data;
 }
 
-export async function cancelRandomMatch(accessToken: string) {
+export async function cancelRandomMatch(accessToken: string): Promise<void> {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_CANCEL}`, {
     method: "DELETE",
     headers: {
@@ -77,13 +103,13 @@ export async function cancelRandomMatch(accessToken: string) {
 
   const body = (await res.json()) as BaseResponse<null>;
   if (!res.ok || !body.success) {
-    throw new Error(body.message || `Cancel match failed: ${res.status}`);
+    throw new Error(body.message || `Cancel random match failed: ${res.status}`);
   }
 
-  return true;
+  return;
 }
 
-export async function getActiveMatch(accessToken: string) {
+export async function getActiveMatch(accessToken: string): Promise<ActiveMatchResponse> {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_ACTIVE}`, {
     method: "GET",
     headers: {
@@ -93,21 +119,62 @@ export async function getActiveMatch(accessToken: string) {
   });
 
   const body = (await res.json()) as BaseResponse<ActiveMatchResponse>;
-  if (!res.ok || !body.success) {
+  if (!res.ok || !body.success || !body.data) {
     throw new Error(body.message || `Get active match failed: ${res.status}`);
   }
 
-  return body.data ?? null;
+  return body.data;
 }
 
-export async function leaveMatch(matchId: string, accessToken: string) {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_LEAVE}/${matchId}/leave`, {
-    method: "DELETE",
+export async function getMatchState(matchId: string, accessToken: string): Promise<MatchStateResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_STATE.replace(":id", matchId)}`, {
+    method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
   });
+
+  const body = (await res.json()) as BaseResponse<MatchStateResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Get match state failed: ${res.status}`);
+  }
+
+  return body.data;
+}
+
+export async function joinPrivateMatch(
+  pinCode: string,
+  accessToken: string,
+): Promise<CreatePrivateMatchResponse> {
+  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_JOIN}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ pinCode }),
+  });
+
+  const body = (await res.json()) as BaseResponse<CreatePrivateMatchResponse>;
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Join match failed: ${res.status}`);
+  }
+
+  return body.data;
+}
+
+export async function leaveMatch(matchId: string, accessToken: string) {
+  const res = await fetch(
+    `${BASE_URL}${Endpoint.MATCH_LEAVE}/${matchId}/leave`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
 
   const body = (await res.json()) as BaseResponse<null>;
   if (!res.ok || !body.success) {
