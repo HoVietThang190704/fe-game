@@ -306,6 +306,11 @@ function GamePageContent() {
     []
   );
 
+  const handleTimeOut = useCallback(() => {
+    console.log("Turn time out!");
+    // The server will handle actual turn switching and health reduction via the onTurnTimeout event
+  }, []);
+
   // Handle reset
   const handleReset = () => {
     setGamePhase("setup");
