@@ -22,12 +22,14 @@ export type MatchPlayer = {
   isReady: boolean;
   playerNumber: number;
   health: number;
+  isHost?: boolean; // UI helper property
 };
 
 export type MatchStateResponse = {
   matchId: string | null;
   pinCode: string;
   status: string;
+  hostId: string; // Add this line
   gameBoard: Record<string, unknown>;
   players: MatchPlayer[];
   boardState: {

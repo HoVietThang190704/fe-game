@@ -78,7 +78,6 @@ export const GamePlayerInfo: React.FC<GamePlayerInfoProps> = ({
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 };
