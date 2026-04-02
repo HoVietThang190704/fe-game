@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Shield, Swords, Timer, XCircle } from "lucide-react";
-import { Client, Message } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 import { Button } from "@/src/components/ui/button";
-import { findRandomMatch, cancelRandomMatch, getActiveMatch } from "@/src/lib/api/match";
+import { findRandomMatch, cancelRandomMatch, getActiveMatch, getMatchState } from "@/src/lib/api/match";
 import { getUserProfile } from "@/src/lib/api/user";
 
 type SearchStatus = "idle" | "searching" | "matched" | "error";
@@ -16,15 +14,30 @@ type CurrentUser = {
   username?: string;
   name?: string;
   email?: string;
+  currentMatchId?: string | null;
 };
 
-type MatchFoundEvent = {
-  type?: string;
-  payload?: {
-    matchId?: string;
-    status?: string;
-  };
-};
+async function redirectToActiveMatch(
+  accessToken: string,
+  userId: string,
+  router: ReturnType<typeof useRouter>,
+  matchId?: string | null,
+) {
+  const activeMatchId = matchId?.trim();
+  if (!activeMatchId) {
+    return false;
+  }
+
+  const matchState = await getMatchState(activeMatchId, accessToken);
+
+  if ((matchState.status || "").toLowerCase() === "waiting") {
+    router.replace("/dashboard/waiting-room");
+    return true;
+  }
+
+  router.replace(`/game?matchId=${encodeURIComponent(activeMatchId)}&userId=${encodeURIComponent(userId)}`);
+  return true;
+}
 
 export default function QuickMatchPage() {
   const router = useRouter();
@@ -50,16 +63,26 @@ export default function QuickMatchPage() {
       }
 
       try {
-        const profile = (await getUserProfile("id,username,name,email")) as unknown as CurrentUser;
+        const profile = await getUserProfile("username,name,email,rank,avatar_url,currentMatchId");
         if (!mounted) {
           return;
         }
 
-        if (!profile?.id) {
+        const profileId = (profile as unknown as { _id?: string; id?: string; userId?: string })._id
+          || (profile as unknown as { _id?: string; id?: string; userId?: string }).id
+          || (profile as unknown as { _id?: string; id?: string; userId?: string }).userId;
+
+        if (!profileId) {
           throw new Error("Không lấy được thông tin người chơi");
         }
 
-        setUser(profile);
+        setUser({
+          id: profileId,
+          username: profile.username,
+          name: profile.name,
+          email: profile.email,
+          currentMatchId: (profile as unknown as { currentMatchId?: string | null }).currentMatchId ?? null,
+        });
       } catch (err: unknown) {
         if (!mounted) {
           return;
@@ -122,53 +145,48 @@ export default function QuickMatchPage() {
   }, [status, accessToken, user?.id, router]);
 
   useEffect(() => {
-    if (!user?.id || !accessToken) {
+    if (!accessToken || !user?.id || status !== "idle") {
       return;
     }
 
-    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
-    const wsUrl = `${serverUrl.replace(/\/$/, "")}/ws-game`;
-    const client = new Client({
-      webSocketFactory: () => new SockJS(wsUrl),
-      reconnectDelay: 2000,
-      onConnect: () => {
-        console.log(`[WebSocket] Connected. Subscribing to /topic/user.${user.id}.matchmaking`);
-        client.subscribe(`/topic/user.${user.id}.matchmaking`, (message: Message) => {
-          console.log("[WebSocket] Received message:", message.body);
-          try {
-            const event = JSON.parse(message.body) as MatchFoundEvent;
-            console.log("[WebSocket] Parsed event:", event);
-            const matchId = event?.payload?.matchId;
-            if (matchId) {
-              console.log(`[WebSocket] Match found! Redirecting to /game?matchId=${matchId}`);
-              setStatus("matched");
-              router.push(`/game?matchId=${encodeURIComponent(matchId)}&userId=${encodeURIComponent(user.id)}`);
-            }
-          } catch (e) {
-            console.error("[WebSocket] Error parsing message:", e);
-          }
-        });
-      },
-      onDisconnect: () => {
-        console.log("[WebSocket] Disconnected");
-      },
-    });
+    let mounted = true;
 
-    console.log(`[WebSocket] Activating client with URL: ${wsUrl}`);
-    client.activate();
-
-    return () => {
-      if (client.active) {
-        client.deactivate();
+    const resumeActiveMatch = async () => {
+      try {
+        const redirected = await redirectToActiveMatch(accessToken, user.id, router, user.currentMatchId);
+        if (redirected && mounted) {
+          setStatus("matched");
+        }
+      } catch {
+        // No active match to resume.
       }
     };
-  }, [accessToken, router, user?.id]);
+
+    resumeActiveMatch();
+
+    return () => {
+      mounted = false;
+    };
+  }, [accessToken, router, status, user?.currentMatchId, user?.id]);
 
   const startSearch = useCallback(async () => {
     if (!accessToken || !user?.id) {
       setError("Vui lòng đăng nhập lại để tìm trận");
       setStatus("error");
       return;
+    }
+
+    if (user.currentMatchId) {
+      try {
+        const redirected = await redirectToActiveMatch(accessToken, user.id, router, user.currentMatchId);
+        if (redirected) {
+          setStatus("matched");
+          setError(null);
+          return;
+        }
+      } catch {
+        // If the stored match cannot be resumed, continue with normal search.
+      }
     }
 
     try {
@@ -189,6 +207,17 @@ export default function QuickMatchPage() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Không thể bắt đầu tìm trận";
+      if (message.toLowerCase().includes("already in an active match") && user.currentMatchId) {
+        try {
+          const redirected = await redirectToActiveMatch(accessToken, user.id, router, user.currentMatchId);
+          if (redirected) {
+            setStatus("matched");
+            return;
+          }
+        } catch {
+          // fall through to showing the original error
+        }
+      }
       console.error("[StartSearch] Error:", message);
       setError(message);
       setStatus("error");

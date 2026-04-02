@@ -19,19 +19,20 @@ export const useGameLogic = (matchId: string, userId: string, options: GameLogic
       send('/app/join_room', { matchId });
     },
     onMessage: (message) => {
+      const payload = (message.payload ?? {}) as Record<string, any>;
       if (message.type === 'start_game') {
-        options.onStartGame?.(message.payload);
+        options.onStartGame?.(payload);
       } else if (message.type === 'move_result') {
-        options.onMoveResult?.(message.payload);
+        options.onMoveResult?.(payload);
       } else if (message.type === 'turn_switched') {
-        options.onTurnSwitched?.(message.payload);
+        options.onTurnSwitched?.(payload);
       } else if (message.type === 'turn_timeout') {
-        options.onTurnTimeout?.(message.payload);
+        options.onTurnTimeout?.(payload);
       } else if (message.type === 'game_over') {
-        updateGameState({ status: 'FINISHED', winnerId: message.payload?.winnerId });
-        options.onGameOver?.(message.payload);
+        updateGameState({ status: 'FINISHED', winnerId: payload.winnerId });
+        options.onGameOver?.(payload);
       } else if (message.type === 'ready_update') {
-        options.onReadyUpdate?.(message.payload);
+        options.onReadyUpdate?.(payload);
       }
     },
   });

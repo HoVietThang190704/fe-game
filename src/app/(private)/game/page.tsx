@@ -43,7 +43,7 @@ function GamePageContent() {
   const toCellId = useCallback((x: number, y: number) => `${x}-${y}`, []);
 
   const startPlayCountdown = useCallback(
-    (nextCurrentTurnId?: string, nextTurnTimeLimit?: number) => {
+    (nextCurrentTurnId?: string | null, nextTurnTimeLimit?: number) => {
       const limit = nextTurnTimeLimit ?? 60;
       setTurnTimeLimit(limit);
       setTimeLeft(limit);
@@ -55,7 +55,7 @@ function GamePageContent() {
         status: "PLAYING",
         matchId,
         userId,
-        currentPlayerId: nextCurrentTurnId,
+        currentPlayerId: nextCurrentTurnId ?? undefined,
       });
     },
     [matchId, updateGameState, userId]
