@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Socket, io } from "socket.io-client";
 import { createPrivateMatch, getActiveMatch, getMatchState, leaveMatch, MatchPlayer, startMatch } from "@/src/lib/api/match";
 import { getMyProfile } from "@/src/lib/api/auth";
+import { useGameWebSocket } from "@/src/lib/hooks/useGameWebSocket";
 import { RoomPinSection } from "@/src/components/dashboard/waiting-room/RoomPinSection";
 import { PlayerStatusSection } from "@/src/components/dashboard/waiting-room/PlayerStatusSection";
 import { MatchSettingsSection } from "@/src/components/dashboard/waiting-room/MatchSettingsSection";
@@ -29,7 +29,6 @@ export default function WaitingRoomPage() {
   const [roomPin, setRoomPin] = useState("----");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [hostPlayer, setHostPlayer] = useState<MatchPlayer | null>(null);
   const [opponentPlayer, setOpponentPlayer] = useState<MatchPlayer | null>(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(true);
@@ -37,7 +36,63 @@ export default function WaitingRoomPage() {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
 
-  const socketRef = useRef<Socket | null>(null);
+  const syncMatchState = async () => {
+    if (!roomId) {
+      return;
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      return;
+    }
+
+    try {
+      const state = await getMatchState(roomId, accessToken);
+
+      if (state.pinCode) {
+        setRoomPin(state.pinCode);
+        localStorage.setItem(ROOM_PIN_STORAGE_KEY, state.pinCode);
+      }
+
+      const host = state.players.find((player) => player.userId === state.hostId || player.isHost);
+      const opponent = state.players.find((player) => player.userId !== state.hostId && player.userId !== host?.userId);
+
+      setHostPlayer(host ? { ...host, isHost: true } : null);
+      setOpponentPlayer(opponent ? { ...opponent, isHost: false } : null);
+
+      if (state.hostId && currentUserId) {
+        setIsHost(state.hostId === currentUserId);
+      }
+
+      const me = state.players.find((player) => player.userId === currentUserId);
+      if (me) {
+        setIsReady(me.isReady);
+      }
+    } catch {
+      // Quiet fail for background sync
+    }
+  };
+
+  const { isConnected, send } = useGameWebSocket({
+    matchId: roomId || undefined,
+    userId: currentUserId || undefined,
+    onConnect: () => {
+      console.log("Connected to match room:", roomId);
+    },
+    onMessage: (message) => {
+      console.log("Received WebSocket message:", message);
+      if (
+        message.type === "player_joined" ||
+        message.type === "player_left" ||
+        message.type === "ready_update" ||
+        message.type === "match_state"
+      ) {
+        syncMatchState();
+      } else if (message.type === "start_game") {
+        router.push(`/game?matchId=${roomId}&userId=${currentUserId}`);
+      }
+    },
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -56,16 +111,16 @@ export default function WaitingRoomPage() {
         const cachedPin = localStorage.getItem(ROOM_PIN_STORAGE_KEY);
         const cachedRoomId = localStorage.getItem(ROOM_ID_STORAGE_KEY);
 
-        if (leftRoom) {
-          setRoomError("Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.");
-          setIsCreatingRoom(false);
-          return;
-        }
-
         const profile = await getMyProfile(accessToken) as ProfileResponse;
         if (isMounted) {
           const uid = profile._id || profile.id || profile.userId || null;
           setCurrentUserId(uid);
+        }
+
+        if (leftRoom) {
+          setRoomError("Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.");
+          setIsCreatingRoom(false);
+          return;
         }
 
         if (cachedPin && cachedRoomId) {
@@ -124,50 +179,13 @@ export default function WaitingRoomPage() {
     };
   }, []);
 
-  const syncMatchState = async () => {
-    if (!roomId) {
-      return;
-    }
-
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      return;
-    }
-
-    try {
-      const state = await getMatchState(roomId, accessToken);
-
-      if (state.pinCode) {
-        setRoomPin(state.pinCode);
-        localStorage.setItem(ROOM_PIN_STORAGE_KEY, state.pinCode);
-      }
-
-      const host = state.players.find((player) => player.userId === state.hostId || player.isHost);
-      const opponent = state.players.find((player) => player.userId !== state.hostId && player.userId !== host?.userId);
-
-      setHostPlayer(host ? { ...host, isHost: true } : null);
-      setOpponentPlayer(opponent ? { ...opponent, isHost: false } : null);
-
-      if (state.hostId && currentUserId) {
-        setIsHost(state.hostId === currentUserId);
-      }
-
-      const me = state.players.find((player) => player.userId === currentUserId);
-      if (me) {
-        setIsReady(me.isReady);
-      }
-    } catch {
-      setRoomError("Không thể đồng bộ trạng thái phòng.");
-    }
-  };
-
   useEffect(() => {
     if (!roomId) {
       return;
     }
 
     syncMatchState();
-    const interval = setInterval(syncMatchState, 4000);
+    const interval = setInterval(syncMatchState, 10000); // Less frequent poll since we have WebSockets now
 
     return () => {
       clearInterval(interval);
@@ -175,55 +193,17 @@ export default function WaitingRoomPage() {
   }, [roomId, currentUserId]);
 
   const handleToggleReady = () => {
-    if (!socketRef.current?.connected || !roomId) {
+    if (!isConnected || !roomId) {
       return;
     }
 
-    socketRef.current.emit("toggle_ready", {
+    send(`/app/toggle_ready`, {
       matchId: roomId,
+      userId: currentUserId,
       ready: !isReady,
     });
     setIsReady(!isReady);
   };
-
-  useEffect(() => {
-    if (!roomId) {
-      return;
-    }
-
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      return;
-    }
-
-    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
-    const socket = io(serverUrl, {
-      auth: { token: accessToken },
-      transports: ["websocket", "polling"],
-    });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      setIsConnected(true);
-      socket.emit("join_room", { matchId: roomId });
-    });
-
-    socket.on("player_joined", syncMatchState);
-    socket.on("player_left", syncMatchState);
-    socket.on("ready_update", syncMatchState);
-    socket.on("match_state", syncMatchState);
-    socket.on("start_game", () => {
-      router.push(`/game?matchId=${roomId}`);
-    });
-    socket.on("disconnect", () => {
-      setIsConnected(false);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [roomId, router]);
 
   const handleCopyPin = async () => {
     if (isCreatingRoom || roomError || roomPin === "----") {
@@ -321,3 +301,4 @@ export default function WaitingRoomPage() {
     </main>
   );
 }
+

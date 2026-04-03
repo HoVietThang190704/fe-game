@@ -28,18 +28,28 @@ export function ActionButtonsSection({
       </Button>
       
       {isHost ? (
-        <Button
-          type="button"
-          onClick={onStartMatch}
-          disabled={!canStart}
-          className={`h-12 rounded-xl border text-base font-bold transition-all duration-300 ${
-            canStart 
-              ? "border-cyan-300/45 bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/35 shadow-[0_0_15px_rgba(6,182,212,0.3)]" 
-              : "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed"
-          }`}
-        >
-          {canStart ? "Bắt đầu trận đấu" : "Chờ đối thủ sẵn sàng..."}
-        </Button>
+        isReady ? (
+          <Button
+            type="button"
+            onClick={onStartMatch}
+            disabled={!canStart}
+            className={`h-12 rounded-xl border text-base font-bold transition-all duration-300 ${
+              canStart 
+                ? "border-cyan-300/45 bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/35 shadow-[0_0_15px_rgba(6,182,212,0.3)]" 
+                : "border-slate-700 bg-slate-800/40 text-slate-500 cursor-not-allowed"
+            }`}
+          >
+            {canStart ? "Bắt đầu trận đấu" : "Chờ đối thủ sẵn sàng..."}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={onToggleReady}
+            className="h-12 rounded-xl border border-amber-400/50 bg-amber-500/20 text-amber-100 font-bold hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+          >
+            Sẵn sàng để bắt đầu
+          </Button>
+        )
       ) : (
         <Button
           type="button"
