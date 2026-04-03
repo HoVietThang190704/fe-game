@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
       console.log("Command clicked:", commandId);
     },
-    [router],
+    [router]
   );
 
   // LOGIC JOIN PHÒNG ĐÃ ĐƯỢC CẬP NHẬT Ở ĐÂY

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   ArrowLeft,
   Zap,
@@ -16,10 +17,24 @@ import {
 import { useMyProfile } from "@/src/lib/hooks/useMyProfile";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { updateUserProfile } from "@/src/lib/api/user";
+import { useState } from "react";
 
 export default function MyProfilePage() {
   const { profile, loading, error } = useMyProfile();
   const router = useRouter();
+  const [editMode, setEditMode] = useState(false);
+  const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (profile && editMode) {
+      setName(profile.name || "");
+      setAvatarUrl(profile.avatar_url || "");
+    }
+  }, [editMode, profile]);
 
   if (loading) {
     return (
@@ -57,6 +72,20 @@ export default function MyProfilePage() {
         ).toFixed(1)
       : 0;
 
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await updateUserProfile({ name, avatar_url: avatarUrl });
+      setEditMode(false);
+      window.location.reload(); // reload to get new info
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Lỗi không xác định");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <main className="profile-theme min-h-screen bg-background p-4 sm:p-8 text-white font-sans transition-colors duration-500">
       <div className="mx-auto max-w-6xl">
@@ -88,25 +117,70 @@ export default function MyProfilePage() {
               <h1 className="text-4xl font-black tracking-tight text-white">
                 {profile.username}
               </h1>
-              {profile.name && profile.name !== profile.username && (
-                <p className="mt-1 text-purple-300 text-sm">{profile.name}</p>
+              {editMode ? (
+                <div className="mt-2 flex flex-col gap-2 items-center md:items-start">
+                  <input
+                    className="rounded px-2 py-1 text-black"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Tên hiển thị"
+                  />
+                  <input
+                    className="rounded px-2 py-1 text-black"
+                    value={avatarUrl}
+                    onChange={e => setAvatarUrl(e.target.value)}
+                    placeholder="Avatar URL"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      className="rounded bg-green-500 px-4 py-2 text-white font-bold hover:bg-green-600"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? "Đang lưu..." : "Lưu"}
+                    </button>
+                    <button
+                      className="rounded bg-gray-400 px-4 py-2 text-white font-bold hover:bg-gray-500"
+                      onClick={() => setEditMode(false)}
+                      disabled={saving}
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                  {saveError && <div className="text-red-400 mt-2">{saveError}</div>}
+                </div>
+              ) : (
+                <>
+                  {profile.name && profile.name !== profile.username && (
+                    <p className="mt-1 text-purple-300 text-sm">{profile.name}</p>
+                  )}
+                  <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-3">
+                    <span className="flex items-center gap-1 text-sm font-bold text-yellow-400">
+                      <TrendingUp className="h-4 w-4" /> {profile.rank} ELO
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-3">
+                    <span className="flex items-center gap-1 text-sm text-purple-300">
+                      Tham gia: {profile.joinDate}
+                    </span>
+                  </div>
+                </>
               )}
-              <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-3">
-                <span className="flex items-center gap-1 text-sm font-bold text-yellow-400">
-                  <TrendingUp className="h-4 w-4" /> {profile.rank} ELO
-                </span>
-              </div>
-              <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-3">
-                <span className="flex items-center gap-1 text-sm text-purple-300">
-                  Tham gia: {profile.joinDate}
-                </span>
-              </div>
             </div>
           </div>
-          <button className="flex w-full md:w-auto items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 font-bold text-purple-950 transition hover:bg-purple-200 active:scale-95">
-            <Zap className="h-5 w-5 fill-current" />
-            Lịch sử đấu
-          </button>
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <button className="flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 font-bold text-purple-950 transition hover:bg-purple-200 active:scale-95 mb-2">
+              <Zap className="h-5 w-5 fill-current" />
+              Lịch sử đấu
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded-xl bg-purple-500 px-8 py-4 font-bold text-white transition hover:bg-purple-600 active:scale-95"
+              onClick={() => setEditMode(true)}
+              disabled={editMode}
+            >
+              Chỉnh sửa hồ sơ
+            </button>
+          </div>
         </div>
 
         <div className="rounded-[2rem] border border-accent/30 bg-primary/10 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
