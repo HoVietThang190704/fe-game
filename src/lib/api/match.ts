@@ -77,7 +77,9 @@ export async function createPrivateMatch(accessToken: string) {
   return body.data;
 }
 
-export async function findRandomMatch(accessToken: string): Promise<WaitingQueueResponse> {
+export async function findRandomMatch(
+  accessToken: string,
+): Promise<WaitingQueueResponse> {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_FIND}`, {
     method: "POST",
     headers: {
@@ -105,13 +107,17 @@ export async function cancelRandomMatch(accessToken: string): Promise<void> {
 
   const body = (await res.json()) as BaseResponse<null>;
   if (!res.ok || !body.success) {
-    throw new Error(body.message || `Cancel random match failed: ${res.status}`);
+    throw new Error(
+      body.message || `Cancel random match failed: ${res.status}`,
+    );
   }
 
   return;
 }
 
-export async function getActiveMatch(accessToken: string): Promise<ActiveMatchResponse> {
+export async function getActiveMatch(
+  accessToken: string,
+): Promise<ActiveMatchResponse> {
   const res = await fetch(`${BASE_URL}${Endpoint.MATCH_ACTIVE}`, {
     method: "GET",
     headers: {
@@ -128,14 +134,20 @@ export async function getActiveMatch(accessToken: string): Promise<ActiveMatchRe
   return body.data;
 }
 
-export async function getMatchState(matchId: string, accessToken: string): Promise<MatchStateResponse> {
-  const res = await fetch(`${BASE_URL}${Endpoint.MATCH_STATE.replace(":id", matchId)}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+export async function getMatchState(
+  matchId: string,
+  accessToken: string,
+): Promise<MatchStateResponse> {
+  const res = await fetch(
+    `${BASE_URL}${Endpoint.MATCH_STATE.replace(":id", matchId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
 
   const body = (await res.json()) as BaseResponse<MatchStateResponse>;
   if (!res.ok || !body.success || !body.data) {
@@ -186,19 +198,74 @@ export async function leaveMatch(matchId: string, accessToken: string) {
   return true;
 }
 
-export async function startMatch(matchId: string, accessToken: string) {
-  const res = await fetch(`${BASE_URL}/api/matches/${matchId}/start`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
+// Match History Types
+export type OpponentDTO = {
+  displayName: string;
+  avatarUrl: string;
+};
+
+export type MatchHistoryDTO = {
+  matchId: string;
+  matchType: string;
+  result: "win" | "lose" | "draw";
+  opponent: OpponentDTO;
+  duration: number; // in seconds
+  eloChange: number;
+  playedAt: string; // ISO 8601 date string
+};
+
+export type PaginatedMatchHistory = {
+  content: MatchHistoryDTO[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  size: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+};
+
+export async function getMatchHistory(
+  accessToken: string,
+  page: number = 0,
+  size: number = 10,
+): Promise<PaginatedMatchHistory> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
   });
 
-  const body = (await res.json()) as BaseResponse<Record<string, unknown>>;
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Start match failed: ${res.status}`);
+  const res = await fetch(
+    `${BASE_URL}/api/match-history?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  const body = (await res.json()) as BaseResponse<{
+    content: MatchHistoryDTO[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  }>;
+
+  if (!res.ok || !body.success || !body.data) {
+    throw new Error(body.message || `Get match history failed: ${res.status}`);
   }
 
-  return body.data;
+  return {
+    content: body.data.content,
+    totalElements: body.data.totalElements,
+    totalPages: body.data.totalPages,
+    currentPage: body.data.number,
+    size: body.data.size,
+    hasNext: body.data.hasNext,
+    hasPrevious: body.data.hasPrevious,
+  };
 }
