@@ -44,9 +44,9 @@ export type MatchStateResponse = {
 };
 
 export type ActiveMatchResponse = {
-  matchId: string;
+  matchId: string | null;
   status: string;
-  currentPlayerId?: string;
+  currentPlayerId?: string | null;
   playerCount?: number;
 };
 
@@ -184,4 +184,21 @@ export async function leaveMatch(matchId: string, accessToken: string) {
   }
 
   return true;
+}
+
+export async function startMatch(matchId: string, accessToken: string) {
+  const res = await fetch(`${BASE_URL}/api/matches/${matchId}/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await res.json()) as BaseResponse<Record<string, unknown>>;
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || `Start match failed: ${res.status}`);
+  }
+
+  return body.data;
 }

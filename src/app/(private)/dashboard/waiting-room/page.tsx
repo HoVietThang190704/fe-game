@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
-import { createPrivateMatch, leaveMatch, getMatchState, getActiveMatch, MatchPlayer } from "@/src/lib/api/match";
+import { Socket, io } from "socket.io-client";
+import { createPrivateMatch, getActiveMatch, getMatchState, leaveMatch, MatchPlayer, startMatch } from "@/src/lib/api/match";
 import { getMyProfile } from "@/src/lib/api/auth";
 import { RoomPinSection } from "@/src/components/dashboard/waiting-room/RoomPinSection";
 import { PlayerStatusSection } from "@/src/components/dashboard/waiting-room/PlayerStatusSection";
@@ -15,12 +14,19 @@ const ROOM_PIN_STORAGE_KEY = "currentRoomPin";
 const ROOM_ID_STORAGE_KEY = "currentMatchId";
 const LEFT_ROOM_FLAG = "leftRoom";
 
+type ProfileResponse = {
+  _id?: string;
+  id?: string;
+  userId?: string;
+  name?: string;
+  username?: string;
+  email?: string;
+};
+
 export default function WaitingRoomPage() {
   const router = useRouter();
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomPin, setRoomPin] = useState("----");
-  const [playerName, setPlayerName] = useState("Người chơi");
-  const [opponentName, setOpponentName] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -30,9 +36,8 @@ export default function WaitingRoomPage() {
   const [roomError, setRoomError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
-  const [matchHostId, setMatchHostId] = useState<string | null>(null);
 
-  const stompClientRef = useRef<Client | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,62 +57,52 @@ export default function WaitingRoomPage() {
         const cachedRoomId = localStorage.getItem(ROOM_ID_STORAGE_KEY);
 
         if (leftRoom) {
-          setRoomError(
-            "Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.",
-          );
+          setRoomError("Bạn đã rời phòng trước đó. Vui lòng tạo phòng mới từ dashboard.");
           setIsCreatingRoom(false);
           return;
         }
 
-        try {
-          const profile = await getMyProfile(accessToken);
-          console.log("Full User Profile:", profile); // Debugging log
-          if (isMounted) {
-            // Mapping currentUserId with fallbacks depending on backend field name
-            const uid = profile._id || (profile as any).id || (profile as any).userId;
-            setCurrentUserId(uid);
-            console.log("Mapped currentUserId:", uid);
-
-            const displayName =
-              profile.name?.trim() || profile.username?.trim() || profile.email;
-            if (displayName) {
-              setPlayerName(displayName);
-            }
-          }
-        } catch (err) {
-          console.error("Profile load error:", err);
+        const profile = await getMyProfile(accessToken) as ProfileResponse;
+        if (isMounted) {
+          const uid = profile._id || profile.id || profile.userId || null;
+          setCurrentUserId(uid);
         }
 
         if (cachedPin && cachedRoomId) {
           setRoomPin(cachedPin);
           setRoomId(cachedRoomId);
-        } else {
-          let room;
-          try {
-            room = await createPrivateMatch(accessToken);
-          } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "";
-            if (message.toLowerCase().includes("already in an active match")) {
-              const activeMatch = await getActiveMatch(accessToken);
-              if (activeMatch && activeMatch.matchId) {
-                const state = await getMatchState(activeMatch.matchId, accessToken);
-                room = {
-                  matchId: activeMatch.matchId,
-                  pinCode: state.pinCode || "----"
-                };
-              } else {
-                throw error;
-              }
-            } else {
-              throw error;
-            }
+          return;
+        }
+
+        let room;
+        try {
+          room = await createPrivateMatch(accessToken);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "";
+          if (!message.toLowerCase().includes("already in an active match")) {
+            throw error;
           }
 
-          if (isMounted) {
-            setRoomPin(room.pinCode);
-            setRoomId(room.matchId);
-            if (room.pinCode) localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
-            if (room.matchId) localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
+          const activeMatch = await getActiveMatch(accessToken);
+          if (!activeMatch?.matchId) {
+            throw error;
+          }
+
+          const state = await getMatchState(activeMatch.matchId, accessToken);
+          room = {
+            matchId: activeMatch.matchId,
+            pinCode: state.pinCode || "----",
+          };
+        }
+
+        if (isMounted) {
+          setRoomPin(room.pinCode);
+          setRoomId(room.matchId);
+          if (room.pinCode) {
+            localStorage.setItem(ROOM_PIN_STORAGE_KEY, room.pinCode);
+          }
+          if (room.matchId) {
+            localStorage.setItem(ROOM_ID_STORAGE_KEY, room.matchId);
           }
         }
       } catch (error: unknown) {
@@ -123,141 +118,118 @@ export default function WaitingRoomPage() {
     };
 
     bootstrapRoom();
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const syncMatchState = async () => {
-    if (!roomId) return;
+    if (!roomId) {
+      return;
+    }
+
     const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return;
+    if (!accessToken) {
+      return;
+    }
 
     try {
       const state = await getMatchState(roomId, accessToken);
+
       if (state.pinCode) {
         setRoomPin(state.pinCode);
         localStorage.setItem(ROOM_PIN_STORAGE_KEY, state.pinCode);
       }
 
-      console.log("Sync Match State Data:", state); // Debugging log
+      const host = state.players.find((player) => player.userId === state.hostId || player.isHost);
+      const opponent = state.players.find((player) => player.userId !== state.hostId && player.userId !== host?.userId);
 
-      if (state.players) {
-        const host = state.players.find((p) => p.userId === state.hostId || p.isHost);
-        const opponent = state.players.find((p) => p.userId !== state.hostId && p.userId !== host?.userId);
+      setHostPlayer(host ? { ...host, isHost: true } : null);
+      setOpponentPlayer(opponent ? { ...opponent, isHost: false } : null);
 
-        console.log("Identification Results:", { 
-          stateHostId: state.hostId, 
-          currentUserId, 
-          isHostMatch: state.hostId === currentUserId,
-          hostFound: host?.userId,
-          opponentFound: opponent?.userId
-        });
-
-        if (host) {
-          setHostPlayer({ ...host, isHost: true });
-        }
-        
-        if (opponent) {
-          setOpponentPlayer({ ...opponent, isHost: false });
-          setOpponentName(opponent.displayName);
-        } else {
-          setOpponentPlayer(null);
-          setOpponentName(null);
-        }
-
-        // Cập nhật isHost cho state cục bộ dựa trên ObjectId (hostId từ backend là ObjectId string)
-        if (state.hostId && currentUserId) {
-          const matching = state.hostId === currentUserId;
-          setIsHost(matching);
-        }
-        
-        const me = state.players.find(p => p.userId === currentUserId);
-        if (me) {
-          setIsReady(me.isReady);
-        }
+      if (state.hostId && currentUserId) {
+        setIsHost(state.hostId === currentUserId);
       }
-    } catch (error) {
-      console.error("fetch match state error", error);
+
+      const me = state.players.find((player) => player.userId === currentUserId);
+      if (me) {
+        setIsReady(me.isReady);
+      }
+    } catch {
+      setRoomError("Không thể đồng bộ trạng thái phòng.");
     }
   };
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId) {
+      return;
+    }
+
     syncMatchState();
     const interval = setInterval(syncMatchState, 4000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [roomId, currentUserId]);
 
   const handleToggleReady = () => {
-    if (stompClientRef.current?.connected) {
-      stompClientRef.current.publish({
-        destination: "/app/toggle_ready",
-        body: JSON.stringify({
-          matchId: roomId,
-          userId: currentUserId,
-          ready: !isReady,
-        }),
-      });
-      setIsReady(!isReady);
+    if (!socketRef.current?.connected || !roomId) {
+      return;
     }
+
+    socketRef.current.emit("toggle_ready", {
+      matchId: roomId,
+      ready: !isReady,
+    });
+    setIsReady(!isReady);
   };
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId) {
+      return;
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      return;
+    }
 
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8080";
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return;
-
-    const stompClient = new Client({
-      webSocketFactory: () => new SockJS(`${serverUrl}/ws-game?token=${accessToken}`),
-      connectHeaders: { Authorization: `Bearer ${accessToken}` },
-      debug: (str) => console.log("STOMP: " + str),
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
+    const socket = io(serverUrl, {
+      auth: { token: accessToken },
+      transports: ["websocket", "polling"],
     });
 
-    stompClientRef.current = stompClient;
+    socketRef.current = socket;
 
-    stompClient.onConnect = () => {
-      console.log("STOMP connected!");
+    socket.on("connect", () => {
       setIsConnected(true);
+      socket.emit("join_room", { matchId: roomId });
+    });
 
-      stompClient.subscribe(`/topic/match/${roomId}`, (message) => {
-        if (message.body) {
-          const data = JSON.parse(message.body);
-          if (["PLAYER_JOINED", "PLAYER_LEFT", "ready_update"].includes(data.type)) {
-            syncMatchState();
-          } else if (data.type === "MATCH_STARTED" || data.type === "start_game") {
-            router.push(`/game?matchId=${roomId}`);
-          }
-        }
-      });
-
-      stompClient.publish({
-        destination: `/app/match/${roomId}/join`,
-        body: JSON.stringify({ playerName: playerName }),
-      });
-    };
-
-    stompClient.onStompError = (frame) => {
-      console.error("STOMP Error:", frame.headers["message"]);
-    };
-
-    stompClient.onWebSocketClose = () => {
+    socket.on("player_joined", syncMatchState);
+    socket.on("player_left", syncMatchState);
+    socket.on("ready_update", syncMatchState);
+    socket.on("match_state", syncMatchState);
+    socket.on("start_game", () => {
+      router.push(`/game?matchId=${roomId}`);
+    });
+    socket.on("disconnect", () => {
       setIsConnected(false);
-    };
-
-    stompClient.activate();
+    });
 
     return () => {
-      if (accessToken && roomId) leaveMatch(roomId, accessToken).catch(() => {});
-      stompClient.deactivate();
+      socket.disconnect();
     };
   }, [roomId, router]);
 
   const handleCopyPin = async () => {
-    if (isCreatingRoom || roomError || roomPin === "----") return;
+    if (isCreatingRoom || roomError || roomPin === "----") {
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(roomPin);
       setCopyStatus("Đã sao chép!");
@@ -267,17 +239,30 @@ export default function WaitingRoomPage() {
   };
 
   useEffect(() => {
-    if (!copyStatus) return;
+    if (!copyStatus) {
+      return;
+    }
+
     const timer = setTimeout(() => setCopyStatus(null), 2000);
     return () => clearTimeout(timer);
   }, [copyStatus]);
 
-  const handleStartMatch = () => {
-    if (stompClientRef.current?.connected) {
-      stompClientRef.current.publish({
-        destination: `/app/match/${roomId}/start`,
-        body: JSON.stringify({}),
-      });
+  const handleStartMatch = async () => {
+    if (!roomId) {
+      return;
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      setRoomError("Thiếu access token. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    try {
+      await startMatch(roomId, accessToken);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Không thể bắt đầu trận";
+      setRoomError(message);
     }
   };
 
@@ -299,7 +284,7 @@ export default function WaitingRoomPage() {
           />
 
           <PlayerStatusSection
-            host={hostPlayer ?? { userId: matchHostId || "", displayName: "Chủ phòng", avatar: "", isReady: true, rank: 0, playerNumber: 1, health: 3 }}
+            host={hostPlayer ?? { userId: "", displayName: "Chủ phòng", avatar: "", isReady: true, rank: 0, playerNumber: 1, health: 3 }}
             opponent={opponentPlayer}
           />
 
@@ -308,19 +293,25 @@ export default function WaitingRoomPage() {
           <ActionButtonsSection
             isHost={isHost}
             isReady={isReady}
-            canStart={!!(opponentPlayer?.isReady) && isConnected}
+            canStart={Boolean(opponentPlayer?.isReady) && isConnected}
             onToggleReady={handleToggleReady}
             onLeaveRoom={async () => {
-              if (!roomId) return;
+              if (!roomId) {
+                return;
+              }
+
               try {
                 const accessToken = localStorage.getItem("accessToken");
-                if (accessToken) await leaveMatch(roomId, accessToken);
+                if (accessToken) {
+                  await leaveMatch(roomId, accessToken);
+                }
                 localStorage.removeItem(ROOM_PIN_STORAGE_KEY);
                 localStorage.removeItem(ROOM_ID_STORAGE_KEY);
                 localStorage.setItem(LEFT_ROOM_FLAG, "true");
                 router.push("/dashboard");
-              } catch (err: any) {
-                setRoomError(err.message);
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Không thể rời phòng";
+                setRoomError(message);
               }
             }}
             onStartMatch={handleStartMatch}
