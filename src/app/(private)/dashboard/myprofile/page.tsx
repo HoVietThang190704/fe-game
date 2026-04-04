@@ -52,25 +52,26 @@ export default function MyProfilePage() {
     );
   }
 
-  const placeholderStats = {
-    totalMatches: 0,
-    longestStreak: 0,
-    currentStreak: 0,
-    winCount: 0,
-    lossCount: 0,
-    bombsFlagged: 0,
-    bombsActivated: 0,
+  // Sử dụng dữ liệu thực từ profile API
+  const stats = {
+    totalMatches: profile.totalMatches || 0,
+    longestStreak: 0, // Chưa có trong API
+    currentStreak: 0, // Chưa có trong API
+    winCount: profile.wins || 0,
+    lossCount: profile.losses || 0,
+    bombsFlagged: 0, // Chưa có trong API
+    bombsActivated: 0, // Chưa có trong API
     avgTime: "N/A",
   };
 
-  const winRate =
-    placeholderStats.winCount + placeholderStats.lossCount > 0
+  // Tính tỷ lệ thắng từ dữ liệu thực
+  const winRate = profile.winRate !== undefined 
+    ? profile.winRate.toFixed(1) 
+    : (stats.winCount + stats.lossCount > 0
       ? (
-          (placeholderStats.winCount /
-            (placeholderStats.winCount + placeholderStats.lossCount)) *
-          100
+          (stats.winCount / (stats.winCount + stats.lossCount)) * 100
         ).toFixed(1)
-      : 0;
+      : 0);
 
   async function handleSave() {
     setSaving(true);
@@ -208,8 +209,8 @@ export default function MyProfilePage() {
                 <div className="space-y-6">
                   <div>
                     <div className="mb-2 flex justify-between text-xs font-medium uppercase tracking-wider text-white/50">
-                      <span>Thắng: {placeholderStats.winCount}</span>
-                      <span>Thua: {placeholderStats.lossCount}</span>
+                      <span>Thắng: {stats.winCount}</span>
+                      <span>Thua: {stats.lossCount}</span>
                     </div>
                     <div className="flex h-4 overflow-hidden rounded-full bg-black/40 p-1 border border-white/10">
                       <div
@@ -225,7 +226,7 @@ export default function MyProfilePage() {
                         Chuỗi hiện tại
                       </p>
                       <p className="text-xl font-bold text-orange-400">
-                        {placeholderStats.currentStreak} 🔥
+                        {stats.currentStreak} 🔥
                       </p>
                     </div>
                     <div className="rounded-2xl bg-white/5 p-4 border border-white/5 transition hover:bg-white/10">
@@ -233,7 +234,7 @@ export default function MyProfilePage() {
                         Chuỗi kỷ lục
                       </p>
                       <p className="text-xl font-bold text-fuchsia-400">
-                        {placeholderStats.longestStreak}
+                        {stats.longestStreak}
                       </p>
                     </div>
                   </div>
@@ -256,7 +257,7 @@ export default function MyProfilePage() {
                     </span>
                   </div>
                   <span className="text-2xl font-black text-white group-hover:text-green-400 transition-colors">
-                    {placeholderStats.bombsFlagged}
+                    {stats.bombsFlagged}
                   </span>
                 </div>
 
@@ -269,17 +270,17 @@ export default function MyProfilePage() {
                       </span>
                     </div>
                     <span className="text-rose-500 font-black text-2xl tracking-tight">
-                      {placeholderStats.bombsActivated}
+                      {stats.bombsActivated}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <span className="text-sm text-white/70">Độ chính xác</span>
                     <span className="font-bold text-lime-400">
-                      {placeholderStats.bombsFlagged > 0
+                      {stats.bombsFlagged > 0
                         ? (
-                            (placeholderStats.bombsFlagged /
-                              (placeholderStats.bombsFlagged +
-                                placeholderStats.bombsActivated)) *
+                            (stats.bombsFlagged /
+                              (stats.bombsFlagged +
+                                stats.bombsActivated)) *
                             100
                           ).toFixed(1)
                         : 0}
@@ -313,7 +314,7 @@ export default function MyProfilePage() {
                         Thời gian TB/Trận
                       </p>
                       <p className="font-bold text-white">
-                        {placeholderStats.avgTime}
+                        {stats.avgTime}
                       </p>
                     </div>
                   </div>
@@ -327,7 +328,7 @@ export default function MyProfilePage() {
                         Tổng trận đã chơi
                       </p>
                       <p className="font-bold text-white">
-                        {placeholderStats.totalMatches}
+                        {stats.totalMatches}
                       </p>
                     </div>
                   </div>

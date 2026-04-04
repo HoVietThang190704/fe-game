@@ -32,6 +32,11 @@ export default function DashboardPage() {
         return;
       }
 
+      if (commandId === "match-history") {
+        router.push("/dashboard/match-history");
+        return;
+      }
+
       if (commandId === "create-room") {
         setCreatingRoom(true);
         setRoomError(null);
@@ -69,7 +74,7 @@ export default function DashboardPage() {
 
       console.log("Command clicked:", commandId);
     },
-    [router]
+    [router],
   );
 
   // LOGIC JOIN PHÒNG ĐÃ ĐƯỢC CẬP NHẬT Ở ĐÂY

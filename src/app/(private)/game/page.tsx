@@ -17,7 +17,9 @@ function GamePageContent() {
   const matchId = searchParams.get("matchId") || "default-match";
   const userId = searchParams.get("userId") || "default-user";
 
-  const [gamePhase, setGamePhase] = useState<"setup" | "waiting" | "countdown" | "playing" | "finished">("setup");
+  const [gamePhase, setGamePhase] = useState<
+    "setup" | "waiting" | "countdown" | "playing" | "finished"
+  >("setup");
   const [currentPlayer, setCurrentPlayer] = useState<"you" | "opponent">("you");
   const [turnTimeLimit, setTurnTimeLimit] = useState(60);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -58,84 +60,113 @@ function GamePageContent() {
         currentPlayerId: nextCurrentTurnId ?? undefined,
       });
     },
-    [matchId, updateGameState, userId]
+    [matchId, updateGameState, userId],
   );
 
-  const { isConnected, placeBombs, revealCell, toggleFlag } = useGameLogic(matchId, userId, {
-    onStartGame: (payload) => {
-      startPlayCountdown(payload?.currentTurn, payload?.turnTimeLimit ?? 60);
-    },
-    onMoveResult: (payload) => {
-      const cellId = toCellId(payload?.x, payload?.y);
-      const isYourMove = payload?.userId === userId;
-      const targetBoard = isYourMove ? opponentBoard : yourBoard;
+  const { isConnected, placeBombs, revealCell, toggleFlag } = useGameLogic(
+    matchId,
+    userId,
+    {
+      onStartGame: (payload) => {
+        startPlayCountdown(payload?.currentTurn, payload?.turnTimeLimit ?? 60);
+      },
+      onMoveResult: (payload) => {
+        const cellId = toCellId(payload?.x, payload?.y);
+        const isYourMove = payload?.userId === userId;
+        const targetBoard = isYourMove ? opponentBoard : yourBoard;
 
-      if (payload?.action === "flag") {
-        targetBoard.setCellState(cellId, "flagged");
-        return;
-      }
+        if (payload?.action === "flag") {
+          targetBoard.setCellState(cellId, "flagged");
+          return;
+        }
 
-      if (payload?.result === "bomb") {
-        targetBoard.setCellState(cellId, "hit");
-      } else if (payload?.result === "shield_blocked") {
-        targetBoard.setCellState(cellId, "hit");
-      } else if (Array.isArray(payload?.revealedCells) && payload.revealedCells.length > 0) {
-        targetBoard.setRevealedCells(payload.revealedCells);
-      } else {
-        targetBoard.setCellState(cellId, "revealed");
-      }
+        if (payload?.result === "bomb") {
+          targetBoard.setCellState(cellId, "hit");
+        } else if (payload?.result === "shield_blocked") {
+          targetBoard.setCellState(cellId, "hit");
+        } else if (
+          Array.isArray(payload?.revealedCells) &&
+          payload.revealedCells.length > 0
+        ) {
+          targetBoard.setRevealedCells(payload.revealedCells);
+        } else {
+          targetBoard.setCellState(cellId, "revealed");
+        }
 
-      if (payload?.shieldBlocked) {
-        setShields((prev) => ({
+        if (payload?.shieldBlocked) {
+          setShields((prev) => ({
+            ...prev,
+            [isYourMove ? "you" : "opponent"]: false,
+          }));
+          setShieldNotice(
+            isYourMove
+              ? "Energy Shield cua ban da chan 1 qua bom!"
+              : "Doi thu da kich hoat Energy Shield va chan 1 qua bom!",
+          );
+        }
+
+        if (isYourMove) {
+          if (payload?.result === "bomb") {
+            setHearts((prev) => ({
+              ...prev,
+              you: payload?.health ?? Math.max(0, prev.you - 1),
+            }));
+            setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
+          } else if (payload?.result === "shield_blocked") {
+            setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
+          } else {
+            setStats((prev) => ({
+              ...prev,
+              playerMisses: prev.playerMisses + 1,
+            }));
+          }
+        } else {
+          if (payload?.result === "bomb") {
+            setHearts((prev) => ({
+              ...prev,
+              opponent: payload?.health ?? Math.max(0, prev.opponent - 1),
+            }));
+            setStats((prev) => ({
+              ...prev,
+              opponentHits: prev.opponentHits + 1,
+            }));
+          } else if (payload?.result === "shield_blocked") {
+            setStats((prev) => ({
+              ...prev,
+              opponentHits: prev.opponentHits + 1,
+            }));
+          } else {
+            setStats((prev) => ({
+              ...prev,
+              opponentMisses: prev.opponentMisses + 1,
+            }));
+          }
+        }
+      },
+      onTurnSwitched: (payload) => {
+        setCurrentPlayer(payload?.currentTurn === userId ? "you" : "opponent");
+        const limit = payload?.turnTimeLimit ?? turnTimeLimit;
+        setTurnTimeLimit(limit);
+        setTimeLeft(limit);
+      },
+      onTurnTimeout: (payload) => {
+        const isYou = payload?.userId === userId;
+        setHearts((prev) => ({
           ...prev,
-          [isYourMove ? "you" : "opponent"]: false,
+          [isYou ? "you" : "opponent"]:
+            payload?.health ??
+            Math.max(0, prev[isYou ? "you" : "opponent"] - 1),
         }));
-        setShieldNotice(isYourMove
-          ? "Energy Shield cua ban da chan 1 qua bom!"
-          : "Doi thu da kich hoat Energy Shield va chan 1 qua bom!");
-      }
-
-      if (isYourMove) {
-        if (payload?.result === "bomb") {
-          setHearts((prev) => ({ ...prev, you: payload?.health ?? Math.max(0, prev.you - 1) }));
-          setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
-        } else if (payload?.result === "shield_blocked") {
-          setStats((prev) => ({ ...prev, playerHits: prev.playerHits + 1 }));
-        } else {
-          setStats((prev) => ({ ...prev, playerMisses: prev.playerMisses + 1 }));
-        }
-      } else {
-        if (payload?.result === "bomb") {
-          setHearts((prev) => ({ ...prev, opponent: payload?.health ?? Math.max(0, prev.opponent - 1) }));
-          setStats((prev) => ({ ...prev, opponentHits: prev.opponentHits + 1 }));
-        } else if (payload?.result === "shield_blocked") {
-          setStats((prev) => ({ ...prev, opponentHits: prev.opponentHits + 1 }));
-        } else {
-          setStats((prev) => ({ ...prev, opponentMisses: prev.opponentMisses + 1 }));
-        }
-      }
+      },
+      onGameOver: (payload) => {
+        const winnerSide = payload?.winnerId === userId ? "you" : "opponent";
+        setWinner(winnerSide);
+        setWinnerEloDelta(payload?.winnerEloDelta ?? 20);
+        setLoserEloDelta(payload?.loserEloDelta ?? -10);
+        setGamePhase("finished");
+      },
     },
-    onTurnSwitched: (payload) => {
-      setCurrentPlayer(payload?.currentTurn === userId ? "you" : "opponent");
-      const limit = payload?.turnTimeLimit ?? turnTimeLimit;
-      setTurnTimeLimit(limit);
-      setTimeLeft(limit);
-    },
-    onTurnTimeout: (payload) => {
-      const isYou = payload?.userId === userId;
-      setHearts((prev) => ({
-        ...prev,
-        [isYou ? "you" : "opponent"]: payload?.health ?? Math.max(0, prev[isYou ? "you" : "opponent"] - 1),
-      }));
-    },
-    onGameOver: (payload) => {
-      const winnerSide = payload?.winnerId === userId ? "you" : "opponent";
-      setWinner(winnerSide);
-      setWinnerEloDelta(payload?.winnerEloDelta ?? 20);
-      setLoserEloDelta(payload?.loserEloDelta ?? -10);
-      setGamePhase("finished");
-    },
-  });
+  );
 
   // Stats
   const [stats, setStats] = useState({
@@ -148,7 +179,9 @@ function GamePageContent() {
   // HP system (3 for each player)
   const [playerHP, setPlayerHP] = useState(3);
   const [opponentHP, setOpponentHP] = useState(3);
-  const [gameStatus, setGameStatus] = useState<"playing" | "won" | "lost">("playing");
+  const [gameStatus, setGameStatus] = useState<"playing" | "won" | "lost">(
+    "playing",
+  );
 
   // Handle setup confirmation
   const handleSetupComplete = useCallback(() => {
@@ -160,10 +193,12 @@ function GamePageContent() {
     completeSetup();
 
     // Convert selected cells to coordinates
-    const bombCoordinates = Array.from(setupState.selectedCells).map((cellId) => {
-      const [x, y] = cellId.split("-").map(Number);
-      return { x, y };
-    });
+    const bombCoordinates = Array.from(setupState.selectedCells).map(
+      (cellId) => {
+        const [x, y] = cellId.split("-").map(Number);
+        return { x, y };
+      },
+    );
 
     // Visual hint on local setup board
     yourBoard.placeMinesOnBoard(Array.from(setupState.selectedCells));
@@ -197,7 +232,7 @@ function GamePageContent() {
 
       // Server decides hit/miss and turn switching
     },
-    [currentPlayer, revealCell, isConnected]
+    [currentPlayer, revealCell, isConnected],
   );
 
   // Handle right click on opponent board (flag)
@@ -213,7 +248,7 @@ function GamePageContent() {
 
       // Server syncs flag state
     },
-    [currentPlayer, toggleFlag, isConnected]
+    [currentPlayer, toggleFlag, isConnected],
   );
 
   useEffect(() => {
@@ -271,7 +306,10 @@ function GamePageContent() {
       return;
     }
 
-    const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    const accessToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
     if (!accessToken) {
       return;
     }
@@ -303,7 +341,7 @@ function GamePageContent() {
       console.log(`Power ${powerIndex} used on ${boardSide} board`);
       // TODO: Implement actual power mechanics
     },
-    []
+    [],
   );
 
   const handleTimeOut = useCallback(() => {
@@ -332,7 +370,7 @@ function GamePageContent() {
       opponentHits: 0,
       opponentMisses: 0,
     });
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_20%_15%,_rgba(5,209,255,0.16),_rgba(8,30,54,0.92)_60%)] text-sky-200 p-4 sm:p-6">
@@ -352,15 +390,28 @@ function GamePageContent() {
           />
         ) : gamePhase === "waiting" ? (
           <section className="mx-auto max-w-2xl rounded-xl border border-cyan-400/30 bg-slate-950/45 p-8 text-center">
-            <h2 className="text-2xl font-bold text-cyan-200">CHO DOI THU DAT BOM</h2>
-            <p className="mt-3 text-sky-100/80">Ban da dat bom xong. Tran dau se bat dau ngay khi doi thu hoan tat.</p>
-            <p className="mt-4 text-sm text-sky-300">WebSocket: {isConnected ? "Da ket noi" : "Dang ket noi..."}</p>
+            <h2 className="text-2xl font-bold text-cyan-200">
+              CHO DOI THU DAT BOM
+            </h2>
+            <p className="mt-3 text-sky-100/80">
+              Ban da dat bom xong. Tran dau se bat dau ngay khi doi thu hoan
+              tat.
+            </p>
+            <p className="mt-4 text-sm text-sky-300">
+              WebSocket: {isConnected ? "Da ket noi" : "Dang ket noi..."}
+            </p>
           </section>
         ) : gamePhase === "countdown" ? (
           <section className="mx-auto max-w-2xl rounded-xl border border-emerald-400/30 bg-slate-950/45 p-8 text-center">
-            <h2 className="text-2xl font-bold text-emerald-200">BAT DAU TRAN SAU</h2>
-            <p className="mt-3 text-sky-100/80">Ca hai nguoi choi da dat bom xong. Chuan bi vao tran PVP.</p>
-            <div className="mt-6 text-6xl font-extrabold tracking-widest text-emerald-300">{countdownLeft}</div>
+            <h2 className="text-2xl font-bold text-emerald-200">
+              BAT DAU TRAN SAU
+            </h2>
+            <p className="mt-3 text-sky-100/80">
+              Ca hai nguoi choi da dat bom xong. Chuan bi vao tran PVP.
+            </p>
+            <div className="mt-6 text-6xl font-extrabold tracking-widest text-emerald-300">
+              {countdownLeft}
+            </div>
           </section>
         ) : gamePhase === "playing" ? (
           <GamePlayPhase
@@ -384,7 +435,8 @@ function GamePageContent() {
             }}
             opponentData={{
               username: "Opponent",
-              avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=opponent",
+              avatar_url:
+                "https://api.dicebear.com/7.x/avataaars/svg?seed=opponent",
               elo: 1200,
               winRate: 55,
               hearts: hearts.opponent,
@@ -396,15 +448,25 @@ function GamePageContent() {
           />
         ) : (
           <section className="mx-auto max-w-2xl rounded-xl border border-cyan-400/30 bg-slate-950/45 p-8 text-center">
-            <h2 className="text-2xl font-bold text-cyan-200">TRAN DA KET THUC</h2>
+            <h2 className="text-2xl font-bold text-cyan-200">
+              TRAN DA KET THUC
+            </h2>
             <p className="mt-3 text-sky-100/80">
-              {winner === "you" ? "Ban da chien thang!" : "Ban da thua. Thu lai van may nao!"}
+              {winner === "you"
+                ? "Ban da chien thang!"
+                : "Ban da thua. Thu lai van may nao!"}
             </p>
             <div className="mt-6 rounded-lg border border-sky-400/20 bg-slate-900/40 p-4 text-left">
               <p className="text-sm text-sky-300">Ket qua ELO</p>
-              <p className="mt-2 text-base text-emerald-300">Nguoi thang: +{winnerEloDelta} ELO</p>
-              <p className="text-base text-rose-300">Nguoi thua: {loserEloDelta} ELO</p>
-              <p className="mt-3 text-xs text-sky-200/70">Dang quay ve dashboard trong vai giay...</p>
+              <p className="mt-2 text-base text-emerald-300">
+                Nguoi thang: +{winnerEloDelta} ELO
+              </p>
+              <p className="text-base text-rose-300">
+                Nguoi thua: {loserEloDelta} ELO
+              </p>
+              <p className="mt-3 text-xs text-sky-200/70">
+                Dang quay ve dashboard trong vai giay...
+              </p>
             </div>
             <button
               onClick={handleReset}
